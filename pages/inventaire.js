@@ -165,7 +165,7 @@ export default function Inventaire() {
                 const status = statuses[key];
                 return (
                   <div className="inv-row" key={key}>
-                    <div>
+                    <div className="inv-article-info">
                       <div className={`inv-name ${status === "nonok" ? "nonok" : ""}`}>
                         {it.article}
                       </div>
@@ -173,22 +173,26 @@ export default function Inventaire() {
                         <div className="inv-qty">Qté : {it.quantite}</div>
                       )}
                     </div>
-                    <button
-                      type="button"
-                      className={`pill-btn ok ${status === "ok" ? "active" : ""}`}
-                      onClick={() => setStatus(key, "ok")}
-                      aria-label={`${it.article} OK`}
-                    >
-                      ✓
-                    </button>
-                    <button
-                      type="button"
-                      className={`pill-btn nonok ${status === "nonok" ? "active" : ""}`}
-                      onClick={() => setStatus(key, "nonok")}
-                      aria-label={`${it.article} Non OK`}
-                    >
-                      ✕
-                    </button>
+                    <div className="inv-buttons">
+                      <button
+                        type="button"
+                        className={`pill-btn ok ${status === "ok" ? "active" : ""}`}
+                        onClick={() => setStatus(key, "ok")}
+                        aria-label={`${it.article} OK`}
+                        title="OK"
+                      >
+                        ✓
+                      </button>
+                      <button
+                        type="button"
+                        className={`pill-btn nonok ${status === "nonok" ? "active" : ""}`}
+                        onClick={() => setStatus(key, "nonok")}
+                        aria-label={`${it.article} Non OK`}
+                        title="Non OK"
+                      >
+                        ✕
+                      </button>
+                    </div>
                   </div>
                 );
               })}

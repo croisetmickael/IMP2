@@ -394,7 +394,7 @@ textarea {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 4px;
+  padding: 12px 8px;
   border-bottom: 1px solid #efece2;
 }
 
@@ -403,6 +403,7 @@ textarea {
   font-size: 15px;
   font-weight: 600;
   color: var(--ink);
+  min-width: 0;
 }
 
 .inv-name.nonok {
@@ -418,12 +419,17 @@ textarea {
   border: 1.5px solid var(--line);
   background: #fff;
   border-radius: 999px;
-  width: 40px;
-  height: 40px;
-  font-size: 17px;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  font-size: 18px;
   font-weight: 700;
   cursor: pointer;
   color: var(--ink-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.12s ease;
 }
 
 .pill-btn.ok.active {
@@ -487,4 +493,53 @@ textarea {
   .home-grid {
     grid-template-columns: 1fr 1fr;
   }
+}
+
+/* Amélioration alignement boutons inventaire */
+.inv-article-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.inv-buttons {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  align-items: center;
+}
+
+.pill-btn {
+  border: 1.5px solid var(--line);
+  background: #fff;
+  border-radius: 999px;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  font-size: 20px;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--ink-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.12s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pill-btn:active {
+  transform: scale(0.92);
+}
+
+.pill-btn.ok.active {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(47, 143, 78, 0.3);
+}
+
+.pill-btn.nonok.active {
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(178, 58, 46, 0.3);
 }
