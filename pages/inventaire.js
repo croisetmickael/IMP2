@@ -2,30 +2,32 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import Shell from "../components/Shell";
+import { INVENTORY_GROUPS } from "../lib/constants";
 
 export default function Inventaire() {
   const router = useRouter();
+  const [activeGroup, setActiveGroup] = useState("baroud");
   const [items, setItems] = useState([]);
-  const [statuses, setStatuses] = useState({}); // { article: "ok" | "nonok" }
+  const [statuses, setStatuses] = useState({});
   const [matricule, setMatricule] = useState("");
   const [observation, setObservation] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(true);
 
+  // Charger les articles du groupe actif
   useEffect(() => {
-    fetch("/api/inventaire")
+    setLoading(true);
+    fetch(`/api/inventaire?group=${activeGroup}`)
       .then((r) => r.json())
-      .then((d) => setItems(d.items || []))
-      .catch(() => {});
-  }, []);
-
-  // Cle unique par article : plusieurs caisses peuvent contenir un article
-  // du meme nom (ex. "SANGLE VARIO" dans Caisse N°3 et Sac Baroud), donc on
-  // ne peut pas utiliser le seul nom comme identifiant.
-  function itemKey(it) {
-    return `${it.emplacement || "Autre"}::${it.article}`;
-  }
+      .then((d) => {
+        setItems(d.items || []);
+        setStatuses({});
+      })
+      .catch(() => setItems([]))
+      .finally(() => setLoading(false));
+  }, [activeGroup]);
 
   const grouped = useMemo(() => {
     const groups = {};
@@ -39,11 +41,15 @@ export default function Inventaire() {
 
   const checkedCount = Object.keys(statuses).length;
 
+  function itemKey(it) {
+    return `${it.emplacement || "Autre"}::${it.article}`;
+  }
+
   function setStatus(key, status) {
     setStatuses((s) => {
       const next = { ...s };
       if (next[key] === status) {
-        delete next[key]; // toggle off
+        delete next[key];
       } else {
         next[key] = status;
       }
@@ -101,11 +107,11 @@ export default function Inventaire() {
         </div>
         <div className="card">
           <div className="field-label">OK ({result.itemsOk.length})</div>
-          <div style={{ marginBottom: 12 }}>
+          <div style={{ marginBottom: 12, fontSize: 14 }}>
             {result.itemsOk.join(", ") || "—"}
           </div>
           <div className="field-label">Non OK ({result.itemsNonOk.length})</div>
-          <div>{result.itemsNonOk.join(", ") || "—"}</div>
+          <div style={{ fontSize: 14 }}>{result.itemsNonOk.join(", ") || "—"}</div>
         </div>
         <button className="btn btn-primary" onClick={() => router.push("/")}>
           Retour à l'accueil
@@ -116,48 +122,78 @@ export default function Inventaire() {
 
   return (
     <Shell title="SMPM" subtitle="Inventaire" showBack>
-      <p style={{ color: "var(--ink-soft)", fontSize: 14, marginBottom: 4 }}>
-        Coche OK ou Non OK pour chaque article contrôlé. Tu peux valider
-        même si tu n'as pas tout vérifié.
-      </p>
+      {/* Boutons de groupe */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
+        {INVENTORY_GROUPS.map((group) => (
+          <button
+            key={group.id}
+            style={{
+              padding: 12,
+              borderRadius: 10,
+              border: "1.5px solid",
+              borderColor: activeGroup === group.id ? "var(--gold-dark)" : "var(--line)",
+              background: activeGroup === group.id ? "#fff8e8" : "#fff",
+              color: activeGroup === group.id ? "var(--navy)" : "var(--ink)",
+              fontWeight: activeGroup === group.id ? 700 : 600,
+              fontSize: 14,
+              cursor: "pointer",
+              textTransform: "uppercase",
+              letterSpacing: "0.03em",
+            }}
+            onClick={() => setActiveGroup(group.id)}
+          >
+            {group.label}
+          </button>
+        ))}
+      </div>
 
-      {Object.entries(grouped).map(([emplacement, list]) => (
-        <div key={emplacement}>
-          <div className="inv-group-title">{emplacement}</div>
-          {list.map((it) => {
-            const key = itemKey(it);
-            const status = statuses[key];
-            return (
-              <div className="inv-row" key={key}>
-                <div>
-                  <div className={`inv-name ${status === "nonok" ? "nonok" : ""}`}>
-                    {it.article}
-                  </div>
-                  {it.quantite && (
-                    <div className="inv-qty">Qté : {it.quantite}</div>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  className={`pill-btn ok ${status === "ok" ? "active" : ""}`}
-                  onClick={() => setStatus(key, "ok")}
-                  aria-label={`${it.article} OK`}
-                >
-                  ✓
-                </button>
-                <button
-                  type="button"
-                  className={`pill-btn nonok ${status === "nonok" ? "active" : ""}`}
-                  onClick={() => setStatus(key, "nonok")}
-                  aria-label={`${it.article} Non OK`}
-                >
-                  ✕
-                </button>
-              </div>
-            );
-          })}
+      {loading ? (
+        <div style={{ textAlign: "center", color: "var(--ink-soft)", padding: 20 }}>
+          Chargement…
         </div>
-      ))}
+      ) : items.length === 0 ? (
+        <div className="empty-state">Aucun article dans ce groupe.</div>
+      ) : (
+        <>
+          {Object.entries(grouped).map(([emplacement, list]) => (
+            <div key={emplacement}>
+              <div className="inv-group-title">{emplacement}</div>
+              {list.map((it) => {
+                const key = itemKey(it);
+                const status = statuses[key];
+                return (
+                  <div className="inv-row" key={key}>
+                    <div>
+                      <div className={`inv-name ${status === "nonok" ? "nonok" : ""}`}>
+                        {it.article}
+                      </div>
+                      {it.quantite && (
+                        <div className="inv-qty">Qté : {it.quantite}</div>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      className={`pill-btn ok ${status === "ok" ? "active" : ""}`}
+                      onClick={() => setStatus(key, "ok")}
+                      aria-label={`${it.article} OK`}
+                    >
+                      ✓
+                    </button>
+                    <button
+                      type="button"
+                      className={`pill-btn nonok ${status === "nonok" ? "active" : ""}`}
+                      onClick={() => setStatus(key, "nonok")}
+                      aria-label={`${it.article} Non OK`}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </>
+      )}
 
       <div className="sticky-footer">
         <div className="card">
@@ -181,7 +217,7 @@ export default function Inventaire() {
           <input
             type="tel"
             inputMode="numeric"
-            placeholder="Ex : 21005"
+            placeholder="Ex : 00001"
             value={matricule}
             onChange={(e) => setMatricule(e.target.value)}
           />

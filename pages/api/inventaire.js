@@ -1,15 +1,26 @@
 // pages/api/inventaire.js
 import { readRange, rangeFor } from "../../lib/googleSheets";
-import { INVENTORY_LOCATIONS, INVENTORY_DATA_START_ROW } from "../../lib/constants";
-
-// L'inventaire est reparti sur un onglet par caisse / emplacement (voir
-// INVENTORY_LOCATIONS). On lit chaque onglet et on fusionne en une seule
-// liste, taguee par son emplacement d'origine.
+import { INVENTORY_GROUPS, INVENTORY_DATA_START_ROW } from "../../lib/constants";
 
 export default async function handler(req, res) {
   try {
+    const { group } = req.query;
+
+    // Si un groupe est spécifié, ne lire que ses emplacements
+    const groupConfig = group
+      ? INVENTORY_GROUPS.find((g) => g.id === group)
+      : null;
+    
+    if (group && !groupConfig) {
+      return res.status(400).json({ error: "Groupe d'inventaire invalide" });
+    }
+
+    const locationsToRead = groupConfig
+      ? groupConfig.locations
+      : INVENTORY_GROUPS.flatMap((g) => g.locations);
+
     const results = await Promise.all(
-      INVENTORY_LOCATIONS.map(async ({ sheet, label }) => {
+      locationsToRead.map(async ({ sheet, label }) => {
         try {
           const rows = await readRange(
             rangeFor(sheet, `A${INVENTORY_DATA_START_ROW}:B500`)
@@ -22,7 +33,6 @@ export default async function handler(req, res) {
               emplacement: label,
             }));
         } catch (err) {
-          // Un onglet renomme/absent ne doit pas casser toute la liste.
           console.error(`Inventaire: onglet "${sheet}" illisible —`, err.message);
           return [];
         }
