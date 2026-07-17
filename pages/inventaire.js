@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import Shell from "../components/Shell";
 import { INVENTORY_GROUPS } from "../lib/constants";
+import { getRandomMatricule } from "../lib/helpers";
 
 export default function Inventaire() {
   const router = useRouter();
@@ -10,11 +11,16 @@ export default function Inventaire() {
   const [items, setItems] = useState([]);
   const [statuses, setStatuses] = useState({});
   const [matricule, setMatricule] = useState("");
+  const [randomMatricule, setRandomMatricule] = useState("");
   const [observation, setObservation] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setRandomMatricule(getRandomMatricule());
+  }, []);
 
   // Charger les articles du groupe actif
   useEffect(() => {
@@ -213,7 +219,7 @@ export default function Inventaire() {
           <input
             type="tel"
             inputMode="numeric"
-            placeholder="Ex : 00001"
+            placeholder={`Ex : ${randomMatricule}`}
             value={matricule}
             onChange={(e) => setMatricule(e.target.value)}
           />

@@ -1,14 +1,20 @@
 // pages/suivi.js
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import Shell from "../components/Shell";
+import { getRandomMatricule } from "../lib/helpers";
 
 export default function Suivi() {
   const router = useRouter();
   const [matricule, setMatricule] = useState("");
+  const [randomMatricule, setRandomMatricule] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
+
+  useEffect(() => {
+    setRandomMatricule(getRandomMatricule());
+  }, []);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -46,7 +52,7 @@ export default function Suivi() {
           <input
             type="tel"
             inputMode="numeric"
-            placeholder="Ex : 21005"
+            placeholder={`Ex : ${randomMatricule}`}
             value={matricule}
             onChange={(e) => setMatricule(e.target.value)}
           />
@@ -104,6 +110,7 @@ export default function Suivi() {
             onClick={() => {
               setResult(null);
               setMatricule("");
+              setRandomMatricule(getRandomMatricule());
             }}
           >
             Changer de matricule

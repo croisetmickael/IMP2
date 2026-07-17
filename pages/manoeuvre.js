@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import Shell from "../components/Shell";
 import PickerSheet from "../components/PickerSheet";
+import { getRandomMatricule } from "../lib/helpers";
 
 const FIELD_LABELS = {
   manoeuvre: "Manœuvre",
@@ -29,10 +30,15 @@ export default function Manoeuvre() {
   });
   const [openPicker, setOpenPicker] = useState(null);
   const [matricule, setMatricule] = useState("");
+  const [randomMatricule, setRandomMatricule] = useState("");
   const [observation, setObservation] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
+
+  useEffect(() => {
+    setRandomMatricule(getRandomMatricule());
+  }, []);
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -93,6 +99,7 @@ export default function Manoeuvre() {
     setObservation("");
     setResult(null);
     setError("");
+    setRandomMatricule(getRandomMatricule());
   }
 
   const heading =
@@ -148,7 +155,7 @@ export default function Manoeuvre() {
           <input
             type="tel"
             inputMode="numeric"
-            placeholder="Ex : 21005"
+            placeholder={`Ex : ${randomMatricule}`}
             value={matricule}
             onChange={(e) => setMatricule(e.target.value)}
           />
