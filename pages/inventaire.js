@@ -68,9 +68,6 @@ export default function Inventaire() {
       return;
     }
     setSubmitting(true);
-    const itemsOk = Object.entries(statuses)
-      .filter(([, v]) => v === "ok")
-      .map(([k]) => k.split("::")[1] ? k.replace("::", " — ") : k);
     const itemsNonOk = Object.entries(statuses)
       .filter(([, v]) => v === "nonok")
       .map(([k]) => k.split("::")[1] ? k.replace("::", " — ") : k);
@@ -81,7 +78,6 @@ export default function Inventaire() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           matricule: matricule.trim(),
-          itemsOk,
           itemsNonOk,
           observation,
         }),
@@ -90,7 +86,7 @@ export default function Inventaire() {
       if (!data.ok) {
         setError(data.error || "Une erreur est survenue.");
       } else {
-        setResult({ agent: data.agent, itemsOk, itemsNonOk });
+        setResult({ agent: data.agent, itemsNonOk });
       }
     } catch (err) {
       setError("Impossible d'enregistrer. Vérifie ta connexion et réessaie.");
@@ -106,12 +102,12 @@ export default function Inventaire() {
           Contrôle enregistré pour {result.agent.prenom} {result.agent.nom}.
         </div>
         <div className="card">
-          <div className="field-label">OK ({result.itemsOk.length})</div>
-          <div style={{ marginBottom: 12, fontSize: 14 }}>
-            {result.itemsOk.join(", ") || "—"}
+          <div className="field-label">Problèmes détectés (Non OK)</div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--red)" }}>
+            {result.itemsNonOk.length > 0
+              ? result.itemsNonOk.join(", ")
+              : "Aucun problème — tous les articles contrôlés sont OK ✓"}
           </div>
-          <div className="field-label">Non OK ({result.itemsNonOk.length})</div>
-          <div style={{ fontSize: 14 }}>{result.itemsNonOk.join(", ") || "—"}</div>
         </div>
         <button className="btn btn-primary" onClick={() => router.push("/")}>
           Retour à l'accueil
