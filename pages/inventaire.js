@@ -17,23 +17,47 @@ export default function Inventaire() {
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     setRandomMatricule(getRandomMatricule());
   }, []);
 
+  // Fonction pour charger l'inventaire
+  async function loadInventory(group) {
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/inventaire?group=${group}`);
+      const data = await res.json();
+      setItems(data.items || []);
+      setStatuses({});
+    } catch (err) {
+      console.error("Erreur chargement inventaire:", err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   // Charger les articles du groupe actif
   useEffect(() => {
-    setLoading(true);
-    fetch(`/api/inventaire?group=${activeGroup}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setItems(d.items || []);
-        setStatuses({});
-      })
-      .catch(() => setItems([]))
-      .finally(() => setLoading(false));
+    loadInventory(activeGroup);
   }, [activeGroup]);
+
+  // Auto-refresh toutes les 30 secondes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadInventory(activeGroup);
+    }, 30000); // 30 secondes
+
+    return () => clearInterval(interval);
+  }, [activeGroup]);
+
+  // Actualisation manuelle
+  async function handleRefresh() {
+    setRefreshing(true);
+    await loadInventory(activeGroup);
+    setRefreshing(false);
+  }
 
   const grouped = useMemo(() => {
     const groups = {};
@@ -123,7 +147,31 @@ export default function Inventaire() {
   }
 
   return (
-    <Shell title="SMPM" subtitle="Inventaire" showBack>
+    <Shell 
+      title="SMPM" 
+      subtitle="Inventaire" 
+      showBack
+      rightAction={
+        <button
+          style={{
+            background: "rgba(255, 255, 255, 0.12)",
+            border: "1px solid rgba(255, 255, 255, 0.25)",
+            color: "#fff",
+            borderRadius: "999px",
+            padding: "8px 14px",
+            fontSize: "12px",
+            fontWeight: 600,
+            cursor: "pointer",
+            opacity: refreshing ? 0.6 : 1,
+          }}
+          onClick={handleRefresh}
+          disabled={refreshing}
+          title="Actualiser l'inventaire"
+        >
+          {refreshing ? "🔄" : "🔄"}
+        </button>
+      }
+    >
       {/* Boutons de groupe */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
         {INVENTORY_GROUPS.map((group) => (
