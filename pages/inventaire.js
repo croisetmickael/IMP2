@@ -15,13 +15,12 @@ export default function Inventaire() {
   const [matricule, setMatricule] = useState("");
   const [randomMatricule, setRandomMatricule] = useState("");
   const [observation, setObservation] = useState("");
-  const [baroudChoice, setBaroudChoice] = useState(null); // "1" ou "2" pour Baroud
+  const [baroudChoice, setBaroudChoice] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [result, setResult] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   
-  // Modal quantité
   const [modalItem, setModalItem] = useState(null);
   const [modalQuantity, setModalQuantity] = useState("");
   const [modalDescription, setModalDescription] = useState("");
@@ -108,23 +107,44 @@ export default function Inventaire() {
     }
 
     setSubmitting(true);
-    const byLocation = {};
     
-    Object.entries(statuses).forEach(([key, status]) => {
-      if (status === "nonok") {
-        const [loc, art] = key.split("::");
-        if (!byLocation[loc]) byLocation[loc] = [];
-        let detail = art;
-        if (quantities[key]) detail += ` (${quantities[key]} manquantes)`;
-        if (descriptions[key]) detail += ` - ${descriptions[key]}`;
-        byLocation[loc].push(detail);
+    // Vérifier s'il y a des Non OK
+    const hasNonOk = Object.values(statuses).some(s => s === "nonok");
+    
+    let itemsNonOk;
+    
+    if (!hasNonOk) {
+      // Tout est OK → "Baroud 1 - Conforme" ou "Baroud 2 - Conforme"
+      if (activeGroup === "baroud") {
+        itemsNonOk = [`Baroud ${baroudChoice} - Conforme`];
+      } else {
+        // Pour autres groupes
+        const groupLabel = INVENTORY_GROUPS.find(g => g.id === activeGroup)?.label || activeGroup;
+        itemsNonOk = [`${groupLabel} - Conforme`];
       }
-    });
+    } else {
+      // Il y a des Non OK → format habituel avec Baroud 1/2
+      const byLocation = {};
+      
+      Object.entries(statuses).forEach(([key, status]) => {
+        if (status === "nonok") {
+          const [loc, art] = key.split("::");
+          if (!byLocation[loc]) byLocation[loc] = [];
+          let detail = art;
+          if (quantities[key]) detail += ` (${quantities[key]} manquantes)`;
+          if (descriptions[key]) detail += ` - ${descriptions[key]}`;
+          byLocation[loc].push(detail);
+        }
+      });
 
-    const itemsNonOk = Object.entries(byLocation).map(([loc, items]) => {
-      const label = loc === "SAC BAROUD" && baroudChoice ? `Baroud ${baroudChoice}` : loc;
-      return `${label} / ${items.join(", ")}`;
-    });
+      itemsNonOk = Object.entries(byLocation).map(([loc, items]) => {
+        let label = loc;
+        if (loc === "SAC BAROUD" && baroudChoice) {
+          label = `Baroud ${baroudChoice}`;
+        }
+        return `${label} / ${items.join(", ")}`;
+      });
+    }
 
     try {
       const res = await fetch("/api/save-inventaire", {
@@ -134,7 +154,7 @@ export default function Inventaire() {
       });
       const data = await res.json();
       if (data.ok) {
-        setResult({ agent: data.agent });
+        setResult({ agent: data.agent, isConforme: !hasNonOk });
       } else {
         setError(data.error);
       }
