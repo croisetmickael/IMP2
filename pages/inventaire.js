@@ -21,6 +21,10 @@ export default function Inventaire() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   
+  // Modal pour choisir Baroud 1 ou 2 avant validation
+  const [showBaroudChoice, setShowBaroudChoice] = useState(false);
+  const [baroudVariant, setBaroudVariant] = useState(null);
+  
   // Modal pour saisir quantité manquante + description
   const [modalItem, setModalItem] = useState(null);
   const [modalQuantity, setModalQuantity] = useState("");
@@ -78,7 +82,6 @@ export default function Inventaire() {
 
   function setStatus(key, status) {
     if (status === "nonok") {
-      // Ouvrir le modal pour demander quantité ET/OU description
       setModalItem(key);
       setModalQuantity(quantities[key] || "");
       setModalDescription(descriptions[key] || "");
@@ -93,7 +96,6 @@ export default function Inventaire() {
         }
         return next;
       });
-      // Effacer quantité et description si passé à OK
       setQuantities((q) => {
         const next = { ...q };
         delete next[key];
@@ -111,7 +113,6 @@ export default function Inventaire() {
     const qty = modalQuantity.trim();
     const desc = modalDescription.trim();
 
-    // Au moins l'un des deux doit être rempli
     if (!qty && !desc) {
       setModalError("Remplis au moins le nombre manquant ou la description.");
       return;
@@ -137,6 +138,18 @@ export default function Inventaire() {
       setError("Contrôle au moins un article avant de valider.");
       return;
     }
+
+    // Si le groupe actif est Baroud, demander le choix 1 ou 2
+    if (activeGroup === "baroud") {
+      setShowBaroudChoice(true);
+      return;
+    }
+
+    // Sinon, procéder à l'enregistrement
+    await performValidation(null);
+  }
+
+  async function performValidation(variant) {
     setSubmitting(true);
 
     // Grouper par emplacement
@@ -164,9 +177,15 @@ export default function Inventaire() {
       }
     });
 
-    // Formater : "Groupe / article1, article2, article3"
+    // Ajouter variante Baroud si applicable
     const itemsNonOk = Object.entries(itemsByEmplacement).map(
-      ([emplacement, articles]) => `${emplacement} / ${articles.join(", ")}`
+      ([emplacement, articles]) => {
+        let label = emplacement;
+        if (emplacement === "SAC BAROUD" && variant) {
+          label = `Baroud ${variant}`;
+        }
+        return `${label} / ${articles.join(", ")}`;
+      }
     );
 
     try {
@@ -189,6 +208,7 @@ export default function Inventaire() {
       setError("Impossible d'enregistrer. Vérifie ta connexion et réessaie.");
     } finally {
       setSubmitting(false);
+      setShowBaroudChoice(false);
     }
   }
 
@@ -314,6 +334,41 @@ export default function Inventaire() {
             </div>
           ))}
         </>
+      )}
+
+      {/* Modal choix Baroud 1 ou 2 avant validation */}
+      {showBaroudChoice && (
+        <div className="modal-backdrop" onClick={() => setShowBaroudChoice(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Quel Baroud ?</h3>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                className="btn btn-primary"
+                style={{ flex: 1 }}
+                onClick={() => performValidation("1")}
+                disabled={submitting}
+              >
+                Baroud 1
+              </button>
+              <button
+                className="btn btn-primary"
+                style={{ flex: 1 }}
+                onClick={() => performValidation("2")}
+                disabled={submitting}
+              >
+                Baroud 2
+              </button>
+            </div>
+            <button
+              className="btn btn-ghost"
+              style={{ marginTop: 10 }}
+              onClick={() => setShowBaroudChoice(false)}
+              disabled={submitting}
+            >
+              Annuler
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Modal pour saisir quantité manquante + description */}
