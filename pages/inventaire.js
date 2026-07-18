@@ -138,22 +138,36 @@ export default function Inventaire() {
       return;
     }
     setSubmitting(true);
-    const itemsNonOk = Object.entries(statuses)
-      .filter(([, v]) => v === "nonok")
-      .map(([k]) => {
-        const article = k.split("::")[1] ? k.replace("::", " — ") : k;
-        const qty = quantities[k];
-        const desc = descriptions[k];
+
+    // Grouper par emplacement
+    const itemsByEmplacement = {};
+    Object.entries(statuses).forEach(([key, status]) => {
+      if (status === "nonok") {
+        const parts = key.split("::");
+        const emplacement = parts[0];
+        const article = parts[1];
         
-        let result = article;
+        if (!itemsByEmplacement[emplacement]) {
+          itemsByEmplacement[emplacement] = [];
+        }
+
+        let detail = article;
+        const qty = quantities[key];
+        const desc = descriptions[key];
         if (qty) {
-          result += ` (${qty} manquantes)`;
+          detail += ` (${qty} manquantes)`;
         }
         if (desc) {
-          result += ` - ${desc}`;
+          detail += ` - ${desc}`;
         }
-        return result;
-      });
+        itemsByEmplacement[emplacement].push(detail);
+      }
+    });
+
+    // Formater : "Groupe / article1, article2, article3"
+    const itemsNonOk = Object.entries(itemsByEmplacement).map(
+      ([emplacement, articles]) => `${emplacement} / ${articles.join(", ")}`
+    );
 
     try {
       const res = await fetch("/api/save-inventaire", {
