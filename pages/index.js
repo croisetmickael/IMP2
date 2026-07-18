@@ -2,12 +2,11 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import Shell from "../components/Shell";
-import PickerSheet from "../components/PickerSheet";
 
 export default function Home() {
   const router = useRouter();
   const [today, setToday] = useState(null);
-  const [pastManoeuvres, setPastManoeuvres] = useState([]);
+  const [allManoeuvres, setAllManoeuvres] = useState([]);
   const [openPicker, setOpenPicker] = useState(false);
 
   useEffect(() => {
@@ -15,8 +14,8 @@ export default function Home() {
       .then((r) => r.json())
       .then((data) => {
         setToday(data);
-        if (!data.hasTodayManoeuvre && data.pastManoeuvres) {
-          setPastManoeuvres(data.pastManoeuvres);
+        if (!data.hasTodayManoeuvre && data.allManoeuvres) {
+          setAllManoeuvres(data.allManoeuvres);
         }
       })
       .catch(() => {});
@@ -41,7 +40,7 @@ export default function Home() {
           <div className="meta">INTERVENTION</div>
         </button>
 
-        {/* Manœuvre du jour */}
+        {/* Manœuvre du jour ou sélection */}
         {today?.hasTodayManoeuvre ? (
           <button
             className="home-tile"
@@ -62,11 +61,11 @@ export default function Home() {
             className="home-tile"
             onClick={() => setOpenPicker(true)}
           >
-            <div className="eyebrow">Pas d'horaire</div>
+            <div className="eyebrow">Calendrier</div>
             <div className="label" style={{ fontSize: 16 }}>
               Manœuvre
             </div>
-            <div className="meta">Choisir une manœuvre</div>
+            <div className="meta">Choisir dans le calendrier</div>
           </button>
         )}
 
@@ -91,14 +90,40 @@ export default function Home() {
         </button>
       </div>
 
-      {/* Picker pour choisir une manœuvre passée */}
-      {openPicker && pastManoeuvres.length > 0 && (
-        <PickerSheet
-          title="Choisir une manœuvre"
-          options={pastManoeuvres}
-          onSelect={handleManoeuvreSelection}
-          onClose={() => setOpenPicker(false)}
-        />
+      {/* Picker pour choisir une manœuvre du calendrier */}
+      {openPicker && allManoeuvres.length > 0 && (
+        <div className="sheet-backdrop" onClick={() => setOpenPicker(false)}>
+          <div className="sheet" onClick={(e) => e.stopPropagation()}>
+            <h3>Choisir une manœuvre</h3>
+            {allManoeuvres.map((m, i) => (
+              <button
+                key={i}
+                type="button"
+                className="sheet-option"
+                onClick={() => {
+                  handleManoeuvreSelection(m.manoeuvre);
+                  setOpenPicker(false);
+                }}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "flex-start",
+                  gap: 4,
+                }}
+              >
+                <span style={{ fontWeight: 700, fontSize: 15 }}>
+                  {m.manoeuvre}
+                </span>
+                <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>
+                  {m.date} — {m.lieu}
+                </span>
+              </button>
+            ))}
+            <button className="sheet-cancel" onClick={() => setOpenPicker(false)}>
+              Fermer
+            </button>
+          </div>
+        </div>
       )}
     </Shell>
   );

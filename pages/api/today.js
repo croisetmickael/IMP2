@@ -4,12 +4,14 @@ import { SHEETS, DATA_START_ROW, todayFR } from "../../lib/constants";
 
 export default async function handler(req, res) {
   try {
-    // 1. Chercher la manœuvre du jour dans Manoeuvres
+    // Lire toutes les manœuvres du calendrier
     const manoeuvresRows = await readRange(
-      rangeFor(SHEETS.MANOEUVRES, `A${DATA_START_ROW}:D200`)
+      rangeFor(SHEETS.MANOEUVRES, `A${DATA_START_ROW}:D500`)
     );
 
     const today = todayFR();
+
+    // Chercher la manœuvre du jour
     const todayManoeuvre = manoeuvresRows.find(
       (r) => r[0] && String(r[0]).trim() === today
     );
@@ -22,22 +24,18 @@ export default async function handler(req, res) {
       });
     }
 
-    // 2. Pas de manœuvre du jour → retourner toutes les manœuvres passées (depuis Suivi)
-    const suiviRows = await readRange(
-      rangeFor(SHEETS.SUIVI, `D${DATA_START_ROW}:D5000`)
-    );
-
-    const pastManoeuvres = [
-      ...new Set(
-        suiviRows
-          .map((r) => r[0] ? String(r[0]).trim() : "")
-          .filter((m) => m && m !== "")
-      ),
-    ];
+    // Pas de manœuvre du jour → retourner toutes les manœuvres du calendrier
+    const allManoeuvres = manoeuvresRows
+      .map((r) => ({
+        date: r[0] ? String(r[0]).trim() : "",
+        manoeuvre: r[1] ? String(r[1]).trim() : "",
+        lieu: r[2] ? String(r[2]).trim() : "",
+      }))
+      .filter((m) => m.manoeuvre && m.date);
 
     res.status(200).json({
       hasTodayManoeuvre: false,
-      pastManoeuvres: pastManoeuvres,
+      allManoeuvres: allManoeuvres,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
