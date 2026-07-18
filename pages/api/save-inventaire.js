@@ -3,19 +3,14 @@ import { appendRow } from "../../lib/googleSheets";
 import { findAgentByMatricule } from "../../lib/agents";
 import { SHEETS, todayFR, nowHeureFR } from "../../lib/constants";
 
-// Colonnes reelles de l'onglet "Suivi_inventaire" :
-// A Date | B Heures | C Agent | D Inventaire | E Observation
-// 
-// On ne sauvegarde que les articles "Non OK" dans la colonne Inventaire.
-// Le matricule sert a identifier l'agent (verification dans l'onglet Agents),
-// mais seul son nom resolu est ecrit dans la feuille.
-
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Methode non autorisee" });
   }
   try {
     const { matricule, itemsNonOk, observation } = req.body;
+
+    console.log("Save inventaire reçu:", { matricule, itemsNonOk, observation });
 
     const agent = await findAgentByMatricule(matricule);
     if (!agent) {
@@ -24,19 +19,30 @@ export default async function handler(req, res) {
         .json({ ok: false, error: "Matricule inconnu. Vérifie le numéro saisi." });
     }
 
-    // On ne sauvegarde que les articles Non OK
-    const nonOkList = (itemsNonOk || []).join(", ");
+    // Joindre les items Non OK
+    const nonOkText = itemsNonOk && itemsNonOk.length > 0 ? itemsNonOk.join(" | ") : "";
+
+    console.log("Enregistrement:", {
+      date: todayFR(),
+      heure: nowHeureFR(),
+      agent: agent.nomComplet,
+      nonOk: nonOkText,
+      observation: observation || "",
+    });
 
     await appendRow(SHEETS.SUIVI_INVENTAIRE, [
       todayFR(),
       nowHeureFR(),
       agent.nomComplet,
-      nonOkList,
+      nonOkText,
       observation || "",
     ]);
 
+    console.log("Enregistrement réussi");
+
     res.status(200).json({ ok: true, agent });
   } catch (err) {
+    console.error("Erreur save-inventaire:", err);
     res.status(500).json({ error: err.message });
   }
 }

@@ -16,71 +16,54 @@ export default function Inventaire() {
   const [randomMatricule, setRandomMatricule] = useState("");
   const [observation, setObservation] = useState("");
   const [error, setError] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [result, setResult] = useState(null);
   
-  // Modal pour choisir Baroud 1 ou 2 avant validation
+  // Modals
   const [showBaroudChoice, setShowBaroudChoice] = useState(false);
-  const [baroudVariant, setBaroudVariant] = useState(null);
-  
-  // Modal pour saisir quantité manquante + description
   const [modalItem, setModalItem] = useState(null);
   const [modalQuantity, setModalQuantity] = useState("");
   const [modalDescription, setModalDescription] = useState("");
   const [modalError, setModalError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     setRandomMatricule(getRandomMatricule());
   }, []);
 
-  // Fonction pour charger l'inventaire
   async function loadInventory(group) {
     try {
       setLoading(true);
       const res = await fetch(`/api/inventaire?group=${group}`);
       const data = await res.json();
       setItems(data.items || []);
-      setStatuses({});
-      setQuantities({});
-      setDescriptions({});
     } catch (err) {
-      console.error("Erreur chargement inventaire:", err);
+      console.error("Erreur:", err);
     } finally {
       setLoading(false);
     }
   }
 
-  // Charger les articles du groupe actif
   useEffect(() => {
     loadInventory(activeGroup);
   }, [activeGroup]);
 
-  // Actualisation manuelle
-  async function handleRefresh() {
-    setRefreshing(true);
-    await loadInventory(activeGroup);
-    setRefreshing(false);
-  }
-
   const grouped = useMemo(() => {
     const groups = {};
-    for (const it of items) {
+    items.forEach((it) => {
       const key = it.emplacement || "Autre";
       if (!groups[key]) groups[key] = [];
       groups[key].push(it);
-    }
+    });
     return groups;
   }, [items]);
 
-  const checkedCount = Object.keys(statuses).length;
-
   function itemKey(it) {
-    return `${it.emplacement || "Autre"}::${it.article}`;
+    return `${it.emplacement}::${it.article}`;
   }
 
-  function setStatus(key, status) {
+  function toggleStatus(key, status) {
     if (status === "nonok") {
       setModalItem(key);
       setModalQuantity(quantities[key] || "");
@@ -89,123 +72,71 @@ export default function Inventaire() {
     } else {
       setStatuses((s) => {
         const next = { ...s };
-        if (next[key] === status) {
-          delete next[key];
-        } else {
-          next[key] = status;
-        }
+        next[key] === status ? delete next[key] : (next[key] = status);
         return next;
       });
-      setQuantities((q) => {
-        const next = { ...q };
-        delete next[key];
-        return next;
-      });
-      setDescriptions((d) => {
-        const next = { ...d };
-        delete next[key];
-        return next;
-      });
+      delete quantities[key];
+      delete descriptions[key];
     }
   }
 
-  function handleConfirmQuantity() {
+  function saveModalItem() {
     const qty = modalQuantity.trim();
     const desc = modalDescription.trim();
-
     if (!qty && !desc) {
-      setModalError("Remplis au moins le nombre manquant ou la description.");
+      setModalError("Au moins un champ requis");
       return;
     }
-
     setStatuses((s) => ({ ...s, [modalItem]: "nonok" }));
     setQuantities((q) => ({ ...q, [modalItem]: qty }));
     setDescriptions((d) => ({ ...d, [modalItem]: desc }));
-    
     setModalItem(null);
-    setModalQuantity("");
-    setModalDescription("");
-    setModalError("");
   }
 
-  async function handleValidate() {
+  async function submit(baroudVariant) {
     setError("");
     if (!matricule.trim()) {
-      setError("Merci de saisir un matricule.");
+      setError("Matricule requis");
       return;
     }
-    if (checkedCount === 0) {
-      setError("Contrôle au moins un article avant de valider.");
-      return;
-    }
-
-    // Si le groupe actif est Baroud, demander le choix 1 ou 2
-    if (activeGroup === "baroud") {
-      setShowBaroudChoice(true);
+    if (Object.keys(statuses).length === 0) {
+      setError("Cocher au moins un article");
       return;
     }
 
-    // Sinon, procéder à l'enregistrement
-    await performValidation(null);
-  }
-
-  async function performValidation(variant) {
     setSubmitting(true);
-
-    // Grouper par emplacement
-    const itemsByEmplacement = {};
+    const byLocation = {};
+    
     Object.entries(statuses).forEach(([key, status]) => {
       if (status === "nonok") {
-        const parts = key.split("::");
-        const emplacement = parts[0];
-        const article = parts[1];
-        
-        if (!itemsByEmplacement[emplacement]) {
-          itemsByEmplacement[emplacement] = [];
-        }
-
-        let detail = article;
-        const qty = quantities[key];
-        const desc = descriptions[key];
-        if (qty) {
-          detail += ` (${qty} manquantes)`;
-        }
-        if (desc) {
-          detail += ` - ${desc}`;
-        }
-        itemsByEmplacement[emplacement].push(detail);
+        const [loc, art] = key.split("::");
+        if (!byLocation[loc]) byLocation[loc] = [];
+        let detail = art;
+        if (quantities[key]) detail += ` (${quantities[key]} manquantes)`;
+        if (descriptions[key]) detail += ` - ${descriptions[key]}`;
+        byLocation[loc].push(detail);
       }
     });
 
-    // Ajouter variante Baroud si applicable
-    const itemsNonOk = Object.entries(itemsByEmplacement).map(
-      ([emplacement, articles]) => {
-        let label = emplacement;
-        if (emplacement === "SAC BAROUD" && variant) {
-          label = `Baroud ${variant}`;
-        }
-        return `${label} / ${articles.join(", ")}`;
-      }
-    );
+    const itemsNonOk = Object.entries(byLocation).map(([loc, items]) => {
+      const label = loc === "SAC BAROUD" && baroudVariant ? `Baroud ${baroudVariant}` : loc;
+      return `${label} / ${items.join(", ")}`;
+    });
 
     try {
       const res = await fetch("/api/save-inventaire", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          matricule: matricule.trim(),
-          itemsNonOk,
-          observation,
-        }),
+        body: JSON.stringify({ matricule: matricule.trim(), itemsNonOk, observation }),
       });
       const data = await res.json();
-      if (!data.ok) {
-        setError(data.error || "Une erreur est survenue.");
-      } else {
+      if (data.ok) {
         setResult({ agent: data.agent, itemsNonOk });
+      } else {
+        setError(data.error);
       }
     } catch (err) {
-      setError("Impossible d'enregistrer. Vérifie ta connexion et réessaie.");
+      setError("Erreur enregistrement");
     } finally {
       setSubmitting(false);
       setShowBaroudChoice(false);
@@ -216,80 +147,52 @@ export default function Inventaire() {
     return (
       <Shell title="SMPM" subtitle="Inventaire" showBack onBack={() => router.push("/")}>
         <div className="alert alert-success">
-          Contrôle enregistré pour {result.agent.prenom} {result.agent.nom}.
+          Enregistré pour {result.agent.prenom} {result.agent.nom}
         </div>
         <div className="card">
-          <div className="field-label">Problèmes détectés (Non OK)</div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--red)" }}>
-            {result.itemsNonOk.length > 0
-              ? result.itemsNonOk.map((item, i) => <div key={i}>{item}</div>)
-              : "Aucun problème — tous les articles contrôlés sont OK ✓"}
-          </div>
+          <div className="field-label">Problèmes (Non OK)</div>
+          {result.itemsNonOk.map((item, i) => (
+            <div key={i} style={{ fontSize: 14, fontWeight: 600, color: "var(--red)" }}>
+              {item}
+            </div>
+          ))}
         </div>
         <button className="btn btn-primary" onClick={() => router.push("/")}>
-          Retour à l'accueil
+          Accueil
         </button>
       </Shell>
     );
   }
 
+  const checkedCount = Object.keys(statuses).length;
+
   return (
-    <Shell 
-      title="SMPM" 
-      subtitle="Inventaire" 
-      showBack
-      rightAction={
-        <button
-          style={{
-            background: "rgba(255, 255, 255, 0.12)",
-            border: "1px solid rgba(255, 255, 255, 0.25)",
-            color: "#fff",
-            borderRadius: "999px",
-            padding: "8px 14px",
-            fontSize: "12px",
-            fontWeight: 600,
-            cursor: "pointer",
-            opacity: refreshing ? 0.6 : 1,
-          }}
-          onClick={handleRefresh}
-          disabled={refreshing}
-          title="Actualiser l'inventaire"
-        >
-          {refreshing ? "🔄" : "🔄"}
-        </button>
-      }
-    >
-      {/* Boutons de groupe */}
+    <Shell title="SMPM" subtitle="Inventaire" showBack>
+      {/* Boutons groupe */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
-        {INVENTORY_GROUPS.map((group) => (
+        {INVENTORY_GROUPS.map((g) => (
           <button
-            key={group.id}
+            key={g.id}
+            onClick={() => setActiveGroup(g.id)}
             style={{
               padding: 12,
               borderRadius: 10,
               border: "1.5px solid",
-              borderColor: activeGroup === group.id ? "var(--gold-dark)" : "var(--line)",
-              background: activeGroup === group.id ? "#fff8e8" : "#fff",
-              color: activeGroup === group.id ? "var(--navy)" : "var(--ink)",
-              fontWeight: activeGroup === group.id ? 700 : 600,
-              fontSize: 14,
+              borderColor: activeGroup === g.id ? "var(--gold-dark)" : "var(--line)",
+              background: activeGroup === g.id ? "#fff8e8" : "#fff",
+              color: activeGroup === g.id ? "var(--navy)" : "var(--ink)",
+              fontWeight: activeGroup === g.id ? 700 : 600,
               cursor: "pointer",
               textTransform: "uppercase",
-              letterSpacing: "0.03em",
             }}
-            onClick={() => setActiveGroup(group.id)}
           >
-            {group.label}
+            {g.label}
           </button>
         ))}
       </div>
 
       {loading ? (
-        <div style={{ textAlign: "center", color: "var(--ink-soft)", padding: 20 }}>
-          Chargement…
-        </div>
-      ) : items.length === 0 ? (
-        <div className="empty-state">Aucun article dans ce groupe.</div>
+        <div style={{ textAlign: "center", padding: 20, color: "var(--ink-soft)" }}>Chargement…</div>
       ) : (
         <>
           {Object.entries(grouped).map(([emplacement, list]) => (
@@ -304,26 +207,18 @@ export default function Inventaire() {
                       <div className={`inv-name ${status === "nonok" ? "nonok" : ""}`}>
                         {it.article}
                       </div>
-                      {it.quantite && (
-                        <div className="inv-qty">Qté : {it.quantite}</div>
-                      )}
+                      {it.quantite && <div className="inv-qty">Qté : {it.quantite}</div>}
                     </div>
                     <div className="inv-buttons">
                       <button
-                        type="button"
                         className={`pill-btn ok ${status === "ok" ? "active" : ""}`}
-                        onClick={() => setStatus(key, "ok")}
-                        aria-label={`${it.article} OK`}
-                        title="OK"
+                        onClick={() => toggleStatus(key, "ok")}
                       >
                         ✓
                       </button>
                       <button
-                        type="button"
                         className={`pill-btn nonok ${status === "nonok" ? "active" : ""}`}
-                        onClick={() => setStatus(key, "nonok")}
-                        aria-label={`${it.article} Non OK`}
-                        title="Non OK"
+                        onClick={() => toggleStatus(key, "nonok")}
                       >
                         ✕
                       </button>
@@ -336,16 +231,16 @@ export default function Inventaire() {
         </>
       )}
 
-      {/* Modal choix Baroud 1 ou 2 avant validation */}
+      {/* Modal Baroud 1/2 */}
       {showBaroudChoice && (
-        <div className="modal-backdrop" onClick={() => setShowBaroudChoice(false)}>
+        <div className="modal-backdrop" onClick={() => !submitting && setShowBaroudChoice(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <h3>Quel Baroud ?</h3>
             <div style={{ display: "flex", gap: 10 }}>
               <button
                 className="btn btn-primary"
                 style={{ flex: 1 }}
-                onClick={() => performValidation("1")}
+                onClick={() => submit("1")}
                 disabled={submitting}
               >
                 Baroud 1
@@ -353,7 +248,7 @@ export default function Inventaire() {
               <button
                 className="btn btn-primary"
                 style={{ flex: 1 }}
-                onClick={() => performValidation("2")}
+                onClick={() => submit("2")}
                 disabled={submitting}
               >
                 Baroud 2
@@ -371,17 +266,13 @@ export default function Inventaire() {
         </div>
       )}
 
-      {/* Modal pour saisir quantité manquante + description */}
+      {/* Modal quantité */}
       {modalItem && (
         <div className="modal-backdrop" onClick={() => setModalItem(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <h3>Détail du problème</h3>
-            <p style={{ fontSize: 12, color: "var(--ink-soft)", marginBottom: 12 }}>
-              Remplis au moins un champ
-            </p>
-            
             <div style={{ marginBottom: 14 }}>
-              <span className="field-label">Nombre manquant (optionnel)</span>
+              <span className="field-label">Nombre manquant</span>
               <input
                 type="tel"
                 inputMode="numeric"
@@ -398,11 +289,10 @@ export default function Inventaire() {
                 }}
               />
             </div>
-
             <div style={{ marginBottom: 14 }}>
-              <span className="field-label">Description (optionnel)</span>
+              <span className="field-label">Description</span>
               <textarea
-                placeholder="Ex: Cassé, dégradé, à remplacer…"
+                placeholder="Cassé, dégradé…"
                 value={modalDescription}
                 onChange={(e) => setModalDescription(e.target.value)}
                 style={{
@@ -416,26 +306,12 @@ export default function Inventaire() {
                 }}
               />
             </div>
-
-            {modalError && (
-              <div className="alert alert-error" style={{ marginBottom: 12 }}>
-                {modalError}
-              </div>
-            )}
-
+            {modalError && <div className="alert alert-error">{modalError}</div>}
             <div style={{ display: "flex", gap: 10 }}>
-              <button
-                className="btn btn-primary"
-                style={{ flex: 1 }}
-                onClick={handleConfirmQuantity}
-              >
+              <button className="btn btn-primary" style={{ flex: 1 }} onClick={saveModalItem}>
                 OK
               </button>
-              <button
-                className="btn btn-ghost"
-                style={{ flex: 1 }}
-                onClick={() => setModalItem(null)}
-              >
+              <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setModalItem(null)}>
                 Annuler
               </button>
             </div>
@@ -443,6 +319,7 @@ export default function Inventaire() {
         </div>
       )}
 
+      {/* Form validation */}
       <div className="sticky-footer">
         <div className="card">
           <span className="field-label">
@@ -450,16 +327,15 @@ export default function Inventaire() {
             {checkedCount > 1 ? "s" : ""}
           </span>
 
-          <span className="field-label" style={{ marginTop: 10 }}>
-            Observation générale (facultatif)
-          </span>
+          <div style={{ height: 12 }} />
+
+          <span className="field-label">Observation</span>
           <textarea
             value={observation}
             onChange={(e) => setObservation(e.target.value)}
-            placeholder="Remarques sur le contrôle…"
+            placeholder="Remarques…"
+            style={{ marginBottom: 12 }}
           />
-
-          <div style={{ height: 12 }} />
 
           <span className="field-label">Matricule</span>
           <input
@@ -468,21 +344,17 @@ export default function Inventaire() {
             placeholder={`Ex : ${randomMatricule}`}
             value={matricule}
             onChange={(e) => setMatricule(e.target.value)}
+            style={{ marginBottom: 12 }}
           />
 
-          {error && (
-            <div className="alert alert-error" style={{ marginTop: 12 }}>
-              {error}
-            </div>
-          )}
+          {error && <div className="alert alert-error">{error}</div>}
 
           <button
             className="btn btn-primary"
-            style={{ marginTop: 12 }}
             disabled={submitting}
-            onClick={handleValidate}
+            onClick={() => activeGroup === "baroud" ? setShowBaroudChoice(true) : submit(null)}
           >
-            {submitting ? "Enregistrement…" : "Valider le contrôle"}
+            {submitting ? "Enregistrement…" : "Valider"}
           </button>
         </div>
       </div>
