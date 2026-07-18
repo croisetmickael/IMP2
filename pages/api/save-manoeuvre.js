@@ -5,15 +5,16 @@ import { SHEETS, todayFR, nowHeureFR } from "../../lib/constants";
 
 // Colonnes reelles de l'onglet "Suivi" :
 // A Date | B Heures | C Agent | D Manœuvre | E Mât | F Treuil | G Rôle | H Observation
-// Le matricule ne sert qu'a identifier l'agent (recherche dans l'onglet
-// Agents) ; seul son nom resolu est ecrit dans la feuille.
+//
+// Le matricule sert a identifier l'agent (verification dans l'onglet Agents),
+// mais seul son nom resolu est ecrit dans la feuille.
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Methode non autorisee" });
   }
   try {
-    const { matricule, manoeuvre, mat, treuil, role, observation } = req.body;
+    const { matricule, manoeuvre, mat, treuil, roles, observation } = req.body;
 
     const agent = await findAgentByMatricule(matricule);
     if (!agent) {
@@ -29,7 +30,7 @@ export default async function handler(req, res) {
       manoeuvre || "",
       mat || "",
       treuil || "",
-      role || "",
+      roles || "", // Peut contenir plusieurs rôles (ex: "Rôle1 / Rôle2")
       observation || "",
     ]);
 

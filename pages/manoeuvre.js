@@ -9,7 +9,7 @@ const FIELD_LABELS = {
   manoeuvre: "Manœuvre",
   mat: "Mât",
   treuil: "Treuil",
-  role: "Rôle",
+  roles: "Rôles",
 };
 
 export default function Manoeuvre() {
@@ -26,7 +26,7 @@ export default function Manoeuvre() {
     manoeuvre: "",
     mat: "",
     treuil: "",
-    role: "",
+    roles: [],
   });
   const [openPicker, setOpenPicker] = useState(null);
   const [matricule, setMatricule] = useState("");
@@ -48,15 +48,14 @@ export default function Manoeuvre() {
       .catch(() => {});
   }, [router.isReady]);
 
-  const optionKeyMap = {
-    manoeuvre: "manoeuvres",
-    mat: "mats",
-    treuil: "treuils",
-    role: "roles",
-  };
-
   function selectValue(field, value) {
-    setSelection((s) => ({ ...s, [field]: value }));
+    if (field === "roles") {
+      // value est un array pour les rôles
+      setSelection((s) => ({ ...s, roles: value }));
+    } else {
+      // single value pour les autres
+      setSelection((s) => ({ ...s, [field]: value }));
+    }
     setOpenPicker(null);
   }
 
@@ -77,7 +76,7 @@ export default function Manoeuvre() {
           manoeuvre: selection.manoeuvre,
           mat: selection.mat,
           treuil: selection.treuil,
-          role: selection.role,
+          roles: selection.roles.join(" / "), // Joindre les rôles
           observation,
         }),
       });
@@ -135,7 +134,7 @@ export default function Manoeuvre() {
 
       <form onSubmit={handleSubmit}>
         <div className="card">
-          {["manoeuvre", "mat", "treuil", "role"].map((field) => (
+          {["manoeuvre", "mat", "treuil"].map((field) => (
             <div key={field} style={{ marginBottom: 12 }}>
               <span className="field-label">{FIELD_LABELS[field]}</span>
               <button
@@ -148,6 +147,23 @@ export default function Manoeuvre() {
               </button>
             </div>
           ))}
+
+          {/* Rôles - multi-select */}
+          <div style={{ marginBottom: 12 }}>
+            <span className="field-label">{FIELD_LABELS.roles}</span>
+            <button
+              type="button"
+              className={`choice-btn ${selection.roles.length > 0 ? "filled" : ""}`}
+              onClick={() => setOpenPicker("roles")}
+            >
+              <span>
+                {selection.roles.length > 0
+                  ? selection.roles.join(", ")
+                  : "Choisir un ou plusieurs rôles"}
+              </span>
+              <span className="arrow">▾</span>
+            </button>
+          </div>
         </div>
 
         <div className="card">
@@ -175,14 +191,23 @@ export default function Manoeuvre() {
         </button>
       </form>
 
-      {openPicker && (
+      {openPicker === "roles" ? (
+        <PickerSheet
+          title={`${FIELD_LABELS.roles} (multi-sélection)`}
+          options={options.roles || []}
+          initialSelected={selection.roles}
+          onSelect={(v) => selectValue("roles", v)}
+          onClose={() => setOpenPicker(null)}
+          multiSelect={true}
+        />
+      ) : openPicker ? (
         <PickerSheet
           title={`Choisir : ${FIELD_LABELS[openPicker]}`}
-          options={options[optionKeyMap[openPicker]] || []}
+          options={options[openPicker === "manoeuvre" ? "manoeuvres" : openPicker === "mat" ? "mats" : "treuils"] || []}
           onSelect={(v) => selectValue(openPicker, v)}
           onClose={() => setOpenPicker(null)}
         />
-      )}
+      ) : null}
     </Shell>
   );
 }
