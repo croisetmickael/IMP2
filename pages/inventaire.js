@@ -10,6 +10,7 @@ export default function Inventaire() {
   const [activeGroup, setActiveGroup] = useState("baroud");
   const [items, setItems] = useState([]);
   const [statuses, setStatuses] = useState({});
+  const [quantities, setQuantities] = useState({}); // Quantités manquantes
   const [matricule, setMatricule] = useState("");
   const [randomMatricule, setRandomMatricule] = useState("");
   const [observation, setObservation] = useState("");
@@ -18,6 +19,10 @@ export default function Inventaire() {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  
+  // Modal pour saisir quantité manquante
+  const [modalItem, setModalItem] = useState(null);
+  const [modalQuantity, setModalQuantity] = useState("");
 
   useEffect(() => {
     setRandomMatricule(getRandomMatricule());
@@ -31,6 +36,7 @@ export default function Inventaire() {
       const data = await res.json();
       setItems(data.items || []);
       setStatuses({});
+      setQuantities({});
     } catch (err) {
       console.error("Erreur chargement inventaire:", err);
     } finally {
@@ -76,15 +82,37 @@ export default function Inventaire() {
   }
 
   function setStatus(key, status) {
-    setStatuses((s) => {
-      const next = { ...s };
-      if (next[key] === status) {
+    if (status === "nonok") {
+      // Ouvrir le modal pour demander la quantité manquante
+      setModalItem(key);
+      setModalQuantity("");
+    } else {
+      setStatuses((s) => {
+        const next = { ...s };
+        if (next[key] === status) {
+          delete next[key];
+        } else {
+          next[key] = status;
+        }
+        return next;
+      });
+      // Effacer quantité si passé à OK
+      setQuantities((q) => {
+        const next = { ...q };
         delete next[key];
-      } else {
-        next[key] = status;
-      }
-      return next;
-    });
+        return next;
+      });
+    }
+  }
+
+  function handleConfirmQuantity() {
+    const qty = modalQuantity.trim();
+    if (qty) {
+      setStatuses((s) => ({ ...s, [modalItem]: "nonok" }));
+      setQuantities((q) => ({ ...q, [modalItem]: qty }));
+    }
+    setModalItem(null);
+    setModalQuantity("");
   }
 
   async function handleValidate() {
@@ -100,7 +128,11 @@ export default function Inventaire() {
     setSubmitting(true);
     const itemsNonOk = Object.entries(statuses)
       .filter(([, v]) => v === "nonok")
-      .map(([k]) => k.split("::")[1] ? k.replace("::", " — ") : k);
+      .map(([k, ]) => {
+        const article = k.split("::")[1] ? k.replace("::", " — ") : k;
+        const qty = quantities[k];
+        return qty ? `${article} (${qty} manquantes)` : article;
+      });
 
     try {
       const res = await fetch("/api/save-inventaire", {
@@ -247,6 +279,53 @@ export default function Inventaire() {
             </div>
           ))}
         </>
+      )}
+
+      {/* Modal pour saisir quantité manquante */}
+      {modalItem && (
+        <div className="modal-backdrop" onClick={() => setModalItem(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Nombre manquant</h3>
+            <p style={{ fontSize: 14, color: "var(--ink-soft)", marginBottom: 12 }}>
+              Combien de pièces manquent ?
+            </p>
+            <input
+              type="tel"
+              inputMode="numeric"
+              placeholder="Ex : 2"
+              value={modalQuantity}
+              onChange={(e) => setModalQuantity(e.target.value)}
+              autoFocus
+              style={{
+                width: "100%",
+                padding: "12px 14px",
+                fontSize: 18,
+                border: "1.5px solid var(--line)",
+                borderRadius: 10,
+                marginBottom: 12,
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleConfirmQuantity();
+              }}
+            />
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                className="btn btn-primary"
+                style={{ flex: 1 }}
+                onClick={handleConfirmQuantity}
+              >
+                OK
+              </button>
+              <button
+                className="btn btn-ghost"
+                style={{ flex: 1 }}
+                onClick={() => setModalItem(null)}
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       <div className="sticky-footer">
