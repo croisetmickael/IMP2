@@ -10,8 +10,8 @@ export default function Inventaire() {
   const [activeGroup, setActiveGroup] = useState("baroud");
   const [items, setItems] = useState([]);
   const [statuses, setStatuses] = useState({});
-  const [quantities, setQuantities] = useState({}); // Quantités manquantes
-  const [descriptions, setDescriptions] = useState({}); // Descriptions
+  const [quantities, setQuantities] = useState({});
+  const [descriptions, setDescriptions] = useState({});
   const [matricule, setMatricule] = useState("");
   const [randomMatricule, setRandomMatricule] = useState("");
   const [observation, setObservation] = useState("");
@@ -25,6 +25,7 @@ export default function Inventaire() {
   const [modalItem, setModalItem] = useState(null);
   const [modalQuantity, setModalQuantity] = useState("");
   const [modalDescription, setModalDescription] = useState("");
+  const [modalError, setModalError] = useState("");
 
   useEffect(() => {
     setRandomMatricule(getRandomMatricule());
@@ -56,7 +57,7 @@ export default function Inventaire() {
   useEffect(() => {
     const interval = setInterval(() => {
       loadInventory(activeGroup);
-    }, 30000); // 30 secondes
+    }, 30000);
 
     return () => clearInterval(interval);
   }, [activeGroup]);
@@ -86,10 +87,11 @@ export default function Inventaire() {
 
   function setStatus(key, status) {
     if (status === "nonok") {
-      // Ouvrir le modal pour demander quantité + description
+      // Ouvrir le modal pour demander quantité ET/OU description
       setModalItem(key);
       setModalQuantity(quantities[key] || "");
       setModalDescription(descriptions[key] || "");
+      setModalError("");
     } else {
       setStatuses((s) => {
         const next = { ...s };
@@ -116,14 +118,22 @@ export default function Inventaire() {
 
   function handleConfirmQuantity() {
     const qty = modalQuantity.trim();
-    if (qty) {
-      setStatuses((s) => ({ ...s, [modalItem]: "nonok" }));
-      setQuantities((q) => ({ ...q, [modalItem]: qty }));
-      setDescriptions((d) => ({ ...d, [modalItem]: modalDescription }));
+    const desc = modalDescription.trim();
+
+    // Au moins l'un des deux doit être rempli
+    if (!qty && !desc) {
+      setModalError("Remplis au moins le nombre manquant ou la description.");
+      return;
     }
+
+    setStatuses((s) => ({ ...s, [modalItem]: "nonok" }));
+    setQuantities((q) => ({ ...q, [modalItem]: qty }));
+    setDescriptions((d) => ({ ...d, [modalItem]: desc }));
+    
     setModalItem(null);
     setModalQuantity("");
     setModalDescription("");
+    setModalError("");
   }
 
   async function handleValidate() {
@@ -301,14 +311,17 @@ export default function Inventaire() {
         </>
       )}
 
-      {/* Modal pour saisir quantité manquante + description */}
+      {/* Modal pour saisir quantité manquante ET/OU description */}
       {modalItem && (
         <div className="modal-backdrop" onClick={() => setModalItem(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <h3>Détail du problème</h3>
+            <p style={{ fontSize: 12, color: "var(--ink-soft)", marginBottom: 12 }}>
+              Remplis au moins un champ
+            </p>
             
             <div style={{ marginBottom: 14 }}>
-              <span className="field-label">Nombre manquant</span>
+              <span className="field-label">Nombre manquant (optionnel)</span>
               <input
                 type="tel"
                 inputMode="numeric"
@@ -327,9 +340,9 @@ export default function Inventaire() {
             </div>
 
             <div style={{ marginBottom: 14 }}>
-              <span className="field-label">Description (cassé, dégradé, etc.)</span>
+              <span className="field-label">Description (optionnel)</span>
               <textarea
-                placeholder="Détailler le problème…"
+                placeholder="Ex: Cassé, dégradé, à remplacer…"
                 value={modalDescription}
                 onChange={(e) => setModalDescription(e.target.value)}
                 style={{
@@ -343,6 +356,12 @@ export default function Inventaire() {
                 }}
               />
             </div>
+
+            {modalError && (
+              <div className="alert alert-error" style={{ marginBottom: 12 }}>
+                {modalError}
+              </div>
+            )}
 
             <div style={{ display: "flex", gap: 10 }}>
               <button
