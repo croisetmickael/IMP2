@@ -7,7 +7,8 @@ import { getRandomMatricule } from "../lib/helpers";
 
 export default function Inventaire() {
   const router = useRouter();
-  const [activeGroup, setActiveGroup] = useState("baroud");
+  const [activeGroup, setActiveGroup] = useState(null);
+  const [baroudVariant, setBaroudVariant] = useState(null); // "1" ou "2"
   const [items, setItems] = useState([]);
   const [statuses, setStatuses] = useState({});
   const [quantities, setQuantities] = useState({});
@@ -21,6 +22,9 @@ export default function Inventaire() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   
+  // Modal pour choisir Baroud 1 ou 2
+  const [showBaroudChoice, setShowBaroudChoice] = useState(false);
+  
   // Modal pour saisir quantité manquante + description
   const [modalItem, setModalItem] = useState(null);
   const [modalQuantity, setModalQuantity] = useState("");
@@ -32,7 +36,7 @@ export default function Inventaire() {
   }, []);
 
   // Fonction pour charger l'inventaire
-  async function loadInventory(group) {
+  async function loadInventory(group, variant = null) {
     try {
       setLoading(true);
       const res = await fetch(`/api/inventaire?group=${group}`);
@@ -41,6 +45,10 @@ export default function Inventaire() {
       setStatuses({});
       setQuantities({});
       setDescriptions({});
+      setActiveGroup(group);
+      if (variant) {
+        setBaroudVariant(variant);
+      }
     } catch (err) {
       console.error("Erreur chargement inventaire:", err);
     } finally {
@@ -48,15 +56,31 @@ export default function Inventaire() {
     }
   }
 
-  // Charger les articles du groupe actif
-  useEffect(() => {
-    loadInventory(activeGroup);
-  }, [activeGroup]);
+  // Clic sur un groupe
+  function handleGroupClick(groupId) {
+    if (groupId === "baroud") {
+      // Pour Baroud, afficher le choix 1 ou 2
+      setShowBaroudChoice(true);
+    } else {
+      // Pour les autres, charger directement
+      loadInventory(groupId);
+    }
+  }
+
+  // Confirmer le choix Baroud
+  function handleBaroudChoice(variant) {
+    loadInventory("baroud", variant);
+    setShowBaroudChoice(false);
+  }
 
   // Actualisation manuelle
   async function handleRefresh() {
     setRefreshing(true);
-    await loadInventory(activeGroup);
+    if (activeGroup === "baroud" && baroudVariant) {
+      await loadInventory("baroud", baroudVariant);
+    } else if (activeGroup) {
+      await loadInventory(activeGroup);
+    }
     setRefreshing(false);
   }
 
@@ -78,7 +102,6 @@ export default function Inventaire() {
 
   function setStatus(key, status) {
     if (status === "nonok") {
-      // Ouvrir le modal pour demander quantité ET/OU description
       setModalItem(key);
       setModalQuantity(quantities[key] || "");
       setModalDescription(descriptions[key] || "");
@@ -93,7 +116,6 @@ export default function Inventaire() {
         }
         return next;
       });
-      // Effacer quantité et description si passé à OK
       setQuantities((q) => {
         const next = { ...q };
         delete next[key];
@@ -111,7 +133,6 @@ export default function Inventaire() {
     const qty = modalQuantity.trim();
     const desc = modalDescription.trim();
 
-    // Au moins l'un des deux doit être rempli
     if (!qty && !desc) {
       setModalError("Remplis au moins le nombre manquant ou la description.");
       return;
@@ -164,9 +185,15 @@ export default function Inventaire() {
       }
     });
 
-    // Formater : "Groupe / article1, article2, article3"
+    // Ajouter variante Baroud si applicable
     const itemsNonOk = Object.entries(itemsByEmplacement).map(
-      ([emplacement, articles]) => `${emplacement} / ${articles.join(", ")}`
+      ([emplacement, articles]) => {
+        let label = emplacement;
+        if (emplacement === "SAC BAROUD" && baroudVariant) {
+          label = `Baroud ${baroudVariant}`;
+        }
+        return `${label} / ${articles.join(", ")}`;
+      }
     );
 
     try {
@@ -219,24 +246,26 @@ export default function Inventaire() {
       subtitle="Inventaire" 
       showBack
       rightAction={
-        <button
-          style={{
-            background: "rgba(255, 255, 255, 0.12)",
-            border: "1px solid rgba(255, 255, 255, 0.25)",
-            color: "#fff",
-            borderRadius: "999px",
-            padding: "8px 14px",
-            fontSize: "12px",
-            fontWeight: 600,
-            cursor: "pointer",
-            opacity: refreshing ? 0.6 : 1,
-          }}
-          onClick={handleRefresh}
-          disabled={refreshing}
-          title="Actualiser l'inventaire"
-        >
-          {refreshing ? "🔄" : "🔄"}
-        </button>
+        activeGroup && (
+          <button
+            style={{
+              background: "rgba(255, 255, 255, 0.12)",
+              border: "1px solid rgba(255, 255, 255, 0.25)",
+              color: "#fff",
+              borderRadius: "999px",
+              padding: "8px 14px",
+              fontSize: "12px",
+              fontWeight: 600,
+              cursor: "pointer",
+              opacity: refreshing ? 0.6 : 1,
+            }}
+            onClick={handleRefresh}
+            disabled={refreshing}
+            title="Actualiser l'inventaire"
+          >
+            {refreshing ? "🔄" : "🔄"}
+          </button>
+        )
       }
     >
       {/* Boutons de groupe */}
@@ -257,64 +286,98 @@ export default function Inventaire() {
               textTransform: "uppercase",
               letterSpacing: "0.03em",
             }}
-            onClick={() => setActiveGroup(group.id)}
+            onClick={() => handleGroupClick(group.id)}
           >
             {group.label}
           </button>
         ))}
       </div>
 
-      {loading ? (
+      {/* Modal choix Baroud 1 ou 2 */}
+      {showBaroudChoice && (
+        <div className="modal-backdrop" onClick={() => setShowBaroudChoice(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Quel Baroud ?</h3>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                className="btn btn-primary"
+                style={{ flex: 1 }}
+                onClick={() => handleBaroudChoice("1")}
+              >
+                Baroud 1
+              </button>
+              <button
+                className="btn btn-primary"
+                style={{ flex: 1 }}
+                onClick={() => handleBaroudChoice("2")}
+              >
+                Baroud 2
+              </button>
+            </div>
+            <button
+              className="btn btn-ghost"
+              style={{ marginTop: 10 }}
+              onClick={() => setShowBaroudChoice(false)}
+            >
+              Annuler
+            </button>
+          </div>
+        </div>
+      )}
+
+      {activeGroup && !loading ? (
+        items.length === 0 ? (
+          <div className="empty-state">Aucun article dans ce groupe.</div>
+        ) : (
+          <>
+            {Object.entries(grouped).map(([emplacement, list]) => (
+              <div key={emplacement}>
+                <div className="inv-group-title">{emplacement}</div>
+                {list.map((it) => {
+                  const key = itemKey(it);
+                  const status = statuses[key];
+                  return (
+                    <div className="inv-row" key={key}>
+                      <div className="inv-article-info">
+                        <div className={`inv-name ${status === "nonok" ? "nonok" : ""}`}>
+                          {it.article}
+                        </div>
+                        {it.quantite && (
+                          <div className="inv-qty">Qté : {it.quantite}</div>
+                        )}
+                      </div>
+                      <div className="inv-buttons">
+                        <button
+                          type="button"
+                          className={`pill-btn ok ${status === "ok" ? "active" : ""}`}
+                          onClick={() => setStatus(key, "ok")}
+                          aria-label={`${it.article} OK`}
+                          title="OK"
+                        >
+                          ✓
+                        </button>
+                        <button
+                          type="button"
+                          className={`pill-btn nonok ${status === "nonok" ? "active" : ""}`}
+                          onClick={() => setStatus(key, "nonok")}
+                          aria-label={`${it.article} Non OK`}
+                          title="Non OK"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+          </>
+        )
+      ) : activeGroup ? (
         <div style={{ textAlign: "center", color: "var(--ink-soft)", padding: 20 }}>
           Chargement…
         </div>
-      ) : items.length === 0 ? (
-        <div className="empty-state">Aucun article dans ce groupe.</div>
-      ) : (
-        <>
-          {Object.entries(grouped).map(([emplacement, list]) => (
-            <div key={emplacement}>
-              <div className="inv-group-title">{emplacement}</div>
-              {list.map((it) => {
-                const key = itemKey(it);
-                const status = statuses[key];
-                return (
-                  <div className="inv-row" key={key}>
-                    <div className="inv-article-info">
-                      <div className={`inv-name ${status === "nonok" ? "nonok" : ""}`}>
-                        {it.article}
-                      </div>
-                      {it.quantite && (
-                        <div className="inv-qty">Qté : {it.quantite}</div>
-                      )}
-                    </div>
-                    <div className="inv-buttons">
-                      <button
-                        type="button"
-                        className={`pill-btn ok ${status === "ok" ? "active" : ""}`}
-                        onClick={() => setStatus(key, "ok")}
-                        aria-label={`${it.article} OK`}
-                        title="OK"
-                      >
-                        ✓
-                      </button>
-                      <button
-                        type="button"
-                        className={`pill-btn nonok ${status === "nonok" ? "active" : ""}`}
-                        onClick={() => setStatus(key, "nonok")}
-                        aria-label={`${it.article} Non OK`}
-                        title="Non OK"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ))}
-        </>
-      )}
+      ) : null}
 
       {/* Modal pour saisir quantité manquante + description */}
       {modalItem && (
@@ -388,49 +451,51 @@ export default function Inventaire() {
         </div>
       )}
 
-      <div className="sticky-footer">
-        <div className="card">
-          <span className="field-label">
-            {checkedCount} article{checkedCount > 1 ? "s" : ""} contrôlé
-            {checkedCount > 1 ? "s" : ""}
-          </span>
+      {activeGroup && (
+        <div className="sticky-footer">
+          <div className="card">
+            <span className="field-label">
+              {checkedCount} article{checkedCount > 1 ? "s" : ""} contrôlé
+              {checkedCount > 1 ? "s" : ""}
+            </span>
 
-          <span className="field-label" style={{ marginTop: 10 }}>
-            Observation générale (facultatif)
-          </span>
-          <textarea
-            value={observation}
-            onChange={(e) => setObservation(e.target.value)}
-            placeholder="Remarques sur le contrôle…"
-          />
+            <span className="field-label" style={{ marginTop: 10 }}>
+              Observation générale (facultatif)
+            </span>
+            <textarea
+              value={observation}
+              onChange={(e) => setObservation(e.target.value)}
+              placeholder="Remarques sur le contrôle…"
+            />
 
-          <div style={{ height: 12 }} />
+            <div style={{ height: 12 }} />
 
-          <span className="field-label">Matricule</span>
-          <input
-            type="tel"
-            inputMode="numeric"
-            placeholder={`Ex : ${randomMatricule}`}
-            value={matricule}
-            onChange={(e) => setMatricule(e.target.value)}
-          />
+            <span className="field-label">Matricule</span>
+            <input
+              type="tel"
+              inputMode="numeric"
+              placeholder={`Ex : ${randomMatricule}`}
+              value={matricule}
+              onChange={(e) => setMatricule(e.target.value)}
+            />
 
-          {error && (
-            <div className="alert alert-error" style={{ marginTop: 12 }}>
-              {error}
-            </div>
-          )}
+            {error && (
+              <div className="alert alert-error" style={{ marginTop: 12 }}>
+                {error}
+              </div>
+            )}
 
-          <button
-            className="btn btn-primary"
-            style={{ marginTop: 12 }}
-            disabled={submitting}
-            onClick={handleValidate}
-          >
-            {submitting ? "Enregistrement…" : "Valider le contrôle"}
-          </button>
+            <button
+              className="btn btn-primary"
+              style={{ marginTop: 12 }}
+              disabled={submitting}
+              onClick={handleValidate}
+            >
+              {submitting ? "Enregistrement…" : "Valider le contrôle"}
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </Shell>
   );
 }
