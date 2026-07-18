@@ -11,6 +11,7 @@ export default function Inventaire() {
   const [items, setItems] = useState([]);
   const [statuses, setStatuses] = useState({});
   const [quantities, setQuantities] = useState({}); // Quantités manquantes
+  const [descriptions, setDescriptions] = useState({}); // Descriptions
   const [matricule, setMatricule] = useState("");
   const [randomMatricule, setRandomMatricule] = useState("");
   const [observation, setObservation] = useState("");
@@ -20,9 +21,10 @@ export default function Inventaire() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   
-  // Modal pour saisir quantité manquante
+  // Modal pour saisir quantité manquante + description
   const [modalItem, setModalItem] = useState(null);
   const [modalQuantity, setModalQuantity] = useState("");
+  const [modalDescription, setModalDescription] = useState("");
 
   useEffect(() => {
     setRandomMatricule(getRandomMatricule());
@@ -37,6 +39,7 @@ export default function Inventaire() {
       setItems(data.items || []);
       setStatuses({});
       setQuantities({});
+      setDescriptions({});
     } catch (err) {
       console.error("Erreur chargement inventaire:", err);
     } finally {
@@ -83,9 +86,10 @@ export default function Inventaire() {
 
   function setStatus(key, status) {
     if (status === "nonok") {
-      // Ouvrir le modal pour demander la quantité manquante
+      // Ouvrir le modal pour demander quantité + description
       setModalItem(key);
-      setModalQuantity("");
+      setModalQuantity(quantities[key] || "");
+      setModalDescription(descriptions[key] || "");
     } else {
       setStatuses((s) => {
         const next = { ...s };
@@ -96,9 +100,14 @@ export default function Inventaire() {
         }
         return next;
       });
-      // Effacer quantité si passé à OK
+      // Effacer quantité et description si passé à OK
       setQuantities((q) => {
         const next = { ...q };
+        delete next[key];
+        return next;
+      });
+      setDescriptions((d) => {
+        const next = { ...d };
         delete next[key];
         return next;
       });
@@ -110,9 +119,11 @@ export default function Inventaire() {
     if (qty) {
       setStatuses((s) => ({ ...s, [modalItem]: "nonok" }));
       setQuantities((q) => ({ ...q, [modalItem]: qty }));
+      setDescriptions((d) => ({ ...d, [modalItem]: modalDescription }));
     }
     setModalItem(null);
     setModalQuantity("");
+    setModalDescription("");
   }
 
   async function handleValidate() {
@@ -128,10 +139,19 @@ export default function Inventaire() {
     setSubmitting(true);
     const itemsNonOk = Object.entries(statuses)
       .filter(([, v]) => v === "nonok")
-      .map(([k, ]) => {
+      .map(([k]) => {
         const article = k.split("::")[1] ? k.replace("::", " — ") : k;
         const qty = quantities[k];
-        return qty ? `${article} (${qty} manquantes)` : article;
+        const desc = descriptions[k];
+        
+        let result = article;
+        if (qty) {
+          result += ` (${qty} manquantes)`;
+        }
+        if (desc) {
+          result += ` - ${desc}`;
+        }
+        return result;
       });
 
     try {
@@ -167,7 +187,7 @@ export default function Inventaire() {
           <div className="field-label">Problèmes détectés (Non OK)</div>
           <div style={{ fontSize: 14, fontWeight: 600, color: "var(--red)" }}>
             {result.itemsNonOk.length > 0
-              ? result.itemsNonOk.join(", ")
+              ? result.itemsNonOk.map((item, i) => <div key={i}>{item}</div>)
               : "Aucun problème — tous les articles contrôlés sont OK ✓"}
           </div>
         </div>
@@ -281,33 +301,49 @@ export default function Inventaire() {
         </>
       )}
 
-      {/* Modal pour saisir quantité manquante */}
+      {/* Modal pour saisir quantité manquante + description */}
       {modalItem && (
         <div className="modal-backdrop" onClick={() => setModalItem(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3>Nombre manquant</h3>
-            <p style={{ fontSize: 14, color: "var(--ink-soft)", marginBottom: 12 }}>
-              Combien de pièces manquent ?
-            </p>
-            <input
-              type="tel"
-              inputMode="numeric"
-              placeholder="Ex : 2"
-              value={modalQuantity}
-              onChange={(e) => setModalQuantity(e.target.value)}
-              autoFocus
-              style={{
-                width: "100%",
-                padding: "12px 14px",
-                fontSize: 18,
-                border: "1.5px solid var(--line)",
-                borderRadius: 10,
-                marginBottom: 12,
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleConfirmQuantity();
-              }}
-            />
+            <h3>Détail du problème</h3>
+            
+            <div style={{ marginBottom: 14 }}>
+              <span className="field-label">Nombre manquant</span>
+              <input
+                type="tel"
+                inputMode="numeric"
+                placeholder="Ex : 2"
+                value={modalQuantity}
+                onChange={(e) => setModalQuantity(e.target.value)}
+                autoFocus
+                style={{
+                  width: "100%",
+                  padding: "12px 14px",
+                  fontSize: 16,
+                  border: "1.5px solid var(--line)",
+                  borderRadius: 10,
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: 14 }}>
+              <span className="field-label">Description (cassé, dégradé, etc.)</span>
+              <textarea
+                placeholder="Détailler le problème…"
+                value={modalDescription}
+                onChange={(e) => setModalDescription(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "12px 14px",
+                  fontSize: 14,
+                  border: "1.5px solid var(--line)",
+                  borderRadius: 10,
+                  minHeight: 60,
+                  fontFamily: "inherit",
+                }}
+              />
+            </div>
+
             <div style={{ display: "flex", gap: 10 }}>
               <button
                 className="btn btn-primary"
