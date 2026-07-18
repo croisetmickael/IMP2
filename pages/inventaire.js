@@ -53,15 +53,6 @@ export default function Inventaire() {
     loadInventory(activeGroup);
   }, [activeGroup]);
 
-  // Auto-refresh toutes les 30 secondes
-  useEffect(() => {
-    const interval = setInterval(() => {
-      loadInventory(activeGroup);
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, [activeGroup]);
-
   // Actualisation manuelle
   async function handleRefresh() {
     setRefreshing(true);
@@ -311,7 +302,7 @@ export default function Inventaire() {
         </>
       )}
 
-      {/* Modal pour saisir quantité manquante ET/OU description */}
+      {/* Modal pour saisir quantité manquante + description */}
       {modalItem && (
         <div className="modal-backdrop" onClick={() => setModalItem(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
