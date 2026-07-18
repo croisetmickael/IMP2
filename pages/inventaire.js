@@ -15,18 +15,17 @@ export default function Inventaire() {
   const [matricule, setMatricule] = useState("");
   const [randomMatricule, setRandomMatricule] = useState("");
   const [observation, setObservation] = useState("");
+  const [baroudChoice, setBaroudChoice] = useState(null); // "1" ou "2" pour Baroud
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [result, setResult] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
   
-  // Modals
-  const [showBaroudChoice, setShowBaroudChoice] = useState(false);
+  // Modal quantité
   const [modalItem, setModalItem] = useState(null);
   const [modalQuantity, setModalQuantity] = useState("");
   const [modalDescription, setModalDescription] = useState("");
   const [modalError, setModalError] = useState("");
-  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     setRandomMatricule(getRandomMatricule());
@@ -93,10 +92,14 @@ export default function Inventaire() {
     setModalItem(null);
   }
 
-  async function submit(baroudVariant) {
+  async function submit() {
     setError("");
     if (!matricule.trim()) {
       setError("Matricule requis");
+      return;
+    }
+    if (activeGroup === "baroud" && !baroudChoice) {
+      setError("Choisir Baroud 1 ou 2");
       return;
     }
     if (Object.keys(statuses).length === 0) {
@@ -119,7 +122,7 @@ export default function Inventaire() {
     });
 
     const itemsNonOk = Object.entries(byLocation).map(([loc, items]) => {
-      const label = loc === "SAC BAROUD" && baroudVariant ? `Baroud ${baroudVariant}` : loc;
+      const label = loc === "SAC BAROUD" && baroudChoice ? `Baroud ${baroudChoice}` : loc;
       return `${label} / ${items.join(", ")}`;
     });
 
@@ -131,7 +134,7 @@ export default function Inventaire() {
       });
       const data = await res.json();
       if (data.ok) {
-        setResult({ agent: data.agent, itemsNonOk });
+        setResult({ agent: data.agent });
       } else {
         setError(data.error);
       }
@@ -139,7 +142,6 @@ export default function Inventaire() {
       setError("Erreur enregistrement");
     } finally {
       setSubmitting(false);
-      setShowBaroudChoice(false);
     }
   }
 
@@ -147,15 +149,12 @@ export default function Inventaire() {
     return (
       <Shell title="SMPM" subtitle="Inventaire" showBack onBack={() => router.push("/")}>
         <div className="alert alert-success">
-          Enregistré pour {result.agent.prenom} {result.agent.nom}
+          ✓ Conforme
         </div>
         <div className="card">
-          <div className="field-label">Problèmes (Non OK)</div>
-          {result.itemsNonOk.map((item, i) => (
-            <div key={i} style={{ fontSize: 14, fontWeight: 600, color: "var(--red)" }}>
-              {item}
-            </div>
-          ))}
+          <div style={{ fontSize: 16, fontWeight: 700, color: "var(--green)", textAlign: "center" }}>
+            Enregistré pour {result.agent.prenom} {result.agent.nom}
+          </div>
         </div>
         <button className="btn btn-primary" onClick={() => router.push("/")}>
           Accueil
@@ -231,41 +230,6 @@ export default function Inventaire() {
         </>
       )}
 
-      {/* Modal Baroud 1/2 */}
-      {showBaroudChoice && (
-        <div className="modal-backdrop" onClick={() => !submitting && setShowBaroudChoice(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3>Quel Baroud ?</h3>
-            <div style={{ display: "flex", gap: 10 }}>
-              <button
-                className="btn btn-primary"
-                style={{ flex: 1 }}
-                onClick={() => submit("1")}
-                disabled={submitting}
-              >
-                Baroud 1
-              </button>
-              <button
-                className="btn btn-primary"
-                style={{ flex: 1 }}
-                onClick={() => submit("2")}
-                disabled={submitting}
-              >
-                Baroud 2
-              </button>
-            </div>
-            <button
-              className="btn btn-ghost"
-              style={{ marginTop: 10 }}
-              onClick={() => setShowBaroudChoice(false)}
-              disabled={submitting}
-            >
-              Annuler
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Modal quantité */}
       {modalItem && (
         <div className="modal-backdrop" onClick={() => setModalItem(null)}>
@@ -329,6 +293,47 @@ export default function Inventaire() {
 
           <div style={{ height: 12 }} />
 
+          {/* Choix Baroud 1 ou 2 */}
+          {activeGroup === "baroud" && (
+            <>
+              <span className="field-label">Quel Baroud ?</span>
+              <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
+                <button
+                  onClick={() => setBaroudChoice("1")}
+                  style={{
+                    flex: 1,
+                    padding: 12,
+                    borderRadius: 10,
+                    border: "2px solid",
+                    borderColor: baroudChoice === "1" ? "var(--gold)" : "var(--line)",
+                    background: baroudChoice === "1" ? "var(--gold)" : "#fff",
+                    color: baroudChoice === "1" ? "var(--navy)" : "var(--ink)",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  Baroud 1
+                </button>
+                <button
+                  onClick={() => setBaroudChoice("2")}
+                  style={{
+                    flex: 1,
+                    padding: 12,
+                    borderRadius: 10,
+                    border: "2px solid",
+                    borderColor: baroudChoice === "2" ? "var(--gold)" : "var(--line)",
+                    background: baroudChoice === "2" ? "var(--gold)" : "#fff",
+                    color: baroudChoice === "2" ? "var(--navy)" : "var(--ink)",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  Baroud 2
+                </button>
+              </div>
+            </>
+          )}
+
           <span className="field-label">Observation</span>
           <textarea
             value={observation}
@@ -352,7 +357,7 @@ export default function Inventaire() {
           <button
             className="btn btn-primary"
             disabled={submitting}
-            onClick={() => activeGroup === "baroud" ? setShowBaroudChoice(true) : submit(null)}
+            onClick={submit}
           >
             {submitting ? "Enregistrement…" : "Valider"}
           </button>
