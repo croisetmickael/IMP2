@@ -9,38 +9,42 @@ const inter = Inter({ subsets: ["latin"] });
 
 function MyApp({ Component, pageProps }) {
   const router = useRouter();
-  const [isReady, setIsReady] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!router.isReady) return;
-
+    // Vérifie l'authentification au démarrage
     const token = localStorage.getItem("smpm_auth");
-    const isLoginPage = router.pathname === "/login";
-
-    // Si on est sur login ET authentifié → aller à l'accueil
-    if (isLoginPage && token === "authenticated") {
-      router.push("/");
-      return;
+    if (token === "authenticated") {
+      setIsAuthenticated(true);
     }
+    setIsLoading(false);
+  }, []);
 
-    // Si on n'est pas sur login ET pas authentifié → aller à login
-    if (!isLoginPage && token !== "authenticated") {
+  useEffect(() => {
+    // Si pas authentifié et pas sur la page login, rediriger vers login
+    if (!isLoading && !isAuthenticated && router.pathname !== "/login") {
       router.push("/login");
-      return;
     }
+  }, [isAuthenticated, isLoading, router]);
 
-    setIsReady(true);
-  }, [router.isReady, router.pathname]);
+  // Pages publiques (pas besoin d'auth)
+  const publicPages = ["/login"];
+  const isPublicPage = publicPages.includes(router.pathname);
 
-  if (!router.isReady || !isReady) {
-    return null;
+  if (isLoading) {
+    return <div style={{ padding: 20, textAlign: "center" }}>Chargement...</div>;
+  }
+
+  if (!isAuthenticated && !isPublicPage) {
+    return null; // Redirection en cours
   }
 
   return (
-    <div style={{ fontFamily: inter.style.fontFamily }}>
+    <div style={{ fontFamily: isPublicPage ? inter.style.fontFamily : oswald.style.fontFamily }}>
       <style jsx global>{`
         * {
-          font-family: ${inter.style.fontFamily};
+          font-family: ${isPublicPage ? inter.style.fontFamily : oswald.style.fontFamily};
         }
       `}</style>
       <Component {...pageProps} />

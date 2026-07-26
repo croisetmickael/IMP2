@@ -4,14 +4,6 @@ import { useRouter } from "next/router";
 export default function Shell({ title, subtitle, showBack, onBack, children, rightAction }) {
   const router = useRouter();
 
-  function handleBack() {
-    if (onBack) {
-      onBack();
-    } else {
-      router.back();
-    }
-  }
-
   function handleLogout() {
     localStorage.removeItem("smpm_auth");
     localStorage.removeItem("smpm_attempts");
@@ -38,7 +30,7 @@ export default function Shell({ title, subtitle, showBack, onBack, children, rig
         <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1 }}>
           {showBack ? (
             <button
-              onClick={handleBack}
+              onClick={onBack}
               style={{
                 background: "none",
                 border: "none",
