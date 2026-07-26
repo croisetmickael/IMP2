@@ -40,6 +40,13 @@ export default function Manoeuvre() {
     setRandomMatricule(getRandomMatricule());
   }, []);
 
+  // Pré-remplir avec "intervention" si type === "intervention"
+  useEffect(() => {
+    if (router.isReady && type === "intervention") {
+      setObservation("intervention");
+    }
+  }, [router.isReady, type]);
+
   useEffect(() => {
     if (!router.isReady) return;
     fetch("/api/actions")
@@ -50,10 +57,8 @@ export default function Manoeuvre() {
 
   function selectValue(field, value) {
     if (field === "roles") {
-      // value est un array pour les rôles
       setSelection((s) => ({ ...s, roles: value }));
     } else {
-      // single value pour les autres
       setSelection((s) => ({ ...s, [field]: value }));
     }
     setOpenPicker(null);
@@ -76,7 +81,7 @@ export default function Manoeuvre() {
           manoeuvre: selection.manoeuvre,
           mat: selection.mat,
           treuil: selection.treuil,
-          roles: selection.roles.join(" / "), // Joindre les rôles
+          roles: selection.roles.join(" / "),
           observation,
         }),
       });
@@ -95,7 +100,7 @@ export default function Manoeuvre() {
 
   function resetForAnotherAgent() {
     setMatricule("");
-    setObservation("");
+    setObservation(type === "intervention" ? "intervention" : "");
     setResult(null);
     setError("");
     setRandomMatricule(getRandomMatricule());
