@@ -47,23 +47,27 @@ export default async function handler(req, res) {
     // Joindre les items Non OK
     const nonOkText = itemsNonOk && itemsNonOk.length > 0 ? itemsNonOk.join(" | ") : "";
 
-    console.log("Enregistrement:", {
-      date: todayFR(),
-      heure: nowHeureFR(),
+    const date = todayFR();
+    const heure = nowHeureFR();
+
+    console.log("Enregistrement inventaire:", {
+      date,
+      heure,
       agent: agent.nomComplet,
       nonOk: nonOkText,
       observation: observation || "",
     });
 
+    // Enregistrer SEULEMENT dans le Sheet 1 "Suivi_inventaire"
     await appendRow(SHEETS.SUIVI_INVENTAIRE, [
-      todayFR(),
-      nowHeureFR(),
+      date,
+      heure,
       agent.nomComplet,
       nonOkText,
       observation || "",
     ]);
 
-    console.log("Enregistrement réussi");
+    console.log("✅ Enregistrement inventaire réussi");
 
     // Envoyer le message Telegram IMMÉDIATEMENT
     await sendTelegramMessage(agent, nonOkText, observation);
