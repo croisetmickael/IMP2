@@ -1,20 +1,16 @@
 // pages/api/save-manoeuvre.js
-import { appendRow } from "../../lib/googleSheets";
+import { appendRow, appendRowToSpreadsheet } from "../../lib/googleSheets";
 import { findAgentByMatricule } from "../../lib/agents";
-import { SHEETS, todayFR, nowHeureFR } from "../../lib/constants";
-
-// Colonnes reelles de l'onglet "Suivi" :
-// A Date | B Heures | C Agent | D Manœuvre | E Mât | F Treuil | G Rôle | H Observation
-//
-// Le matricule sert a identifier l'agent (verification dans l'onglet Agents),
-// mais seul son nom resolu est ecrit dans la feuille.
+import { SHEETS, SECOND_SPREADSHEET_ID, SECOND_SPREADSHEET_SHEET, todayFR, nowHeureFR } from "../../lib/constants";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Methode non autorisee" });
   }
   try {
-    const { matricule, manoeuvre, mat, treuil, roles, observation } = req.body;
+    const { matricule, action, roles, observation } = req.body;
+
+    console.log("Save manoeuvre reçu:", { matricule, action, roles, observation });
 
     const agent = await findAgentByMatricule(matricule);
     if (!agent) {
@@ -23,19 +19,55 @@ export default async function handler(req, res) {
         .json({ ok: false, error: "Matricule inconnu. Vérifie le numéro saisi." });
     }
 
+    const rolesText = roles && roles.length > 0 ? roles.join(" / ") : "";
+
+    const date = todayFR();
+    const heure = nowHeureFR();
+
+    console.log("Enregistrement manoeuvre:", {
+      date,
+      heure,
+      agent: agent.nomComplet,
+      action,
+      roles: rolesText,
+      observation: observation || "",
+    });
+
+    // 1️⃣ Enregistrer dans le Sheet 1 "Suivi"
     await appendRow(SHEETS.SUIVI, [
-      todayFR(),
-      nowHeureFR(),
+      date,
+      heure,
       agent.nomComplet,
-      manoeuvre || "",
-      mat || "",
-      treuil || "",
-      roles || "", // Peut contenir plusieurs rôles (ex: "Rôle1 / Rôle2")
+      action,
+      "",
+      "",
+      rolesText,
       observation || "",
     ]);
 
+    console.log("✅ Enregistrement dans Sheet 1 réussi");
+
+    // 2️⃣ Enregistrer aussi dans le Sheet 2 "Suivi"
+    await appendRowToSpreadsheet(
+      SECOND_SPREADSHEET_ID,
+      SECOND_SPREADSHEET_SHEET,
+      [
+        date,
+        heure,
+        agent.nomComplet,
+        action,
+        "",
+        "",
+        rolesText,
+        observation || "",
+      ]
+    );
+
+    console.log("✅ Enregistrement dans Sheet 2 réussi");
+
     res.status(200).json({ ok: true, agent });
   } catch (err) {
+    console.error("Erreur save-manoeuvre:", err);
     res.status(500).json({ error: err.message });
   }
 }
