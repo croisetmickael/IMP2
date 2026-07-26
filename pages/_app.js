@@ -1,37 +1,55 @@
 // pages/_app.js
+import { useRouter } from "next/router";
+import { useEffect, useState } from "react";
 import { Oswald, Inter } from "next/font/google";
-import Head from "next/head";
 import "../styles/globals.css";
 
-const display = Oswald({
-  subsets: ["latin"],
-  weight: ["500", "700"],
-  variable: "--font-display",
-});
+const oswald = Oswald({ subsets: ["latin"] });
+const inter = Inter({ subsets: ["latin"] });
 
-const body = Inter({
-  subsets: ["latin"],
-  weight: ["400", "600", "700"],
-  variable: "--font-body",
-});
+function MyApp({ Component, pageProps }) {
+  const router = useRouter();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-export default function App({ Component, pageProps }) {
+  useEffect(() => {
+    // Vérifie l'authentification au démarrage
+    const token = localStorage.getItem("smpm_auth");
+    if (token === "authenticated") {
+      setIsAuthenticated(true);
+    }
+    setIsLoading(false);
+  }, []);
+
+  useEffect(() => {
+    // Si pas authentifié et pas sur la page login, rediriger vers login
+    if (!isLoading && !isAuthenticated && router.pathname !== "/login") {
+      router.push("/login");
+    }
+  }, [isAuthenticated, isLoading, router]);
+
+  // Pages publiques (pas besoin d'auth)
+  const publicPages = ["/login"];
+  const isPublicPage = publicPages.includes(router.pathname);
+
+  if (isLoading) {
+    return <div style={{ padding: 20, textAlign: "center" }}>Chargement...</div>;
+  }
+
+  if (!isAuthenticated && !isPublicPage) {
+    return null; // Redirection en cours
+  }
+
   return (
-    <>
-      <Head>
-        <title>SMPM — Suivi GRIMP 80</title>
-        <meta
-          name="viewport"
-          content="width=device-width, initial-scale=1, maximum-scale=1"
-        />
-        <meta name="theme-color" content="#12294a" />
-        <link rel="manifest" href="/manifest.json" />
-        <link rel="apple-touch-icon" href="/icons/icon-192.png" />
-        <link rel="icon" href="/icons/icon-192.png" />
-      </Head>
-      <div className={`${display.variable} ${body.variable}`}>
-        <Component {...pageProps} />
-      </div>
-    </>
+    <div style={{ fontFamily: isPublicPage ? inter.style.fontFamily : oswald.style.fontFamily }}>
+      <style jsx global>{`
+        * {
+          font-family: ${isPublicPage ? inter.style.fontFamily : oswald.style.fontFamily};
+        }
+      `}</style>
+      <Component {...pageProps} />
+    </div>
   );
 }
+
+export default MyApp;
