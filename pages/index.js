@@ -8,6 +8,10 @@ export default function Home() {
   const [today, setToday] = useState(null);
   const [allManoeuvres, setAllManoeuvres] = useState([]);
   const [openPicker, setOpenPicker] = useState(false);
+  const [showMessageModal, setShowMessageModal] = useState(false);
+  const [messageText, setMessageText] = useState("");
+  const [senderName, setSenderName] = useState("");
+  const [sendingMessage, setSendingMessage] = useState(false);
 
   useEffect(() => {
     fetch("/api/today")
@@ -23,6 +27,39 @@ export default function Home() {
 
   function handleManoeuvreSelection(manoeuvre) {
     router.push(`/manoeuvre?type=manoeuvre&lieu=${encodeURIComponent(manoeuvre)}`);
+  }
+
+  async function sendMessageToTelegram() {
+    if (!messageText.trim()) {
+      alert("Message vide");
+      return;
+    }
+
+    setSendingMessage(true);
+    try {
+      const res = await fetch("/api/send-message-telegram", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: messageText,
+          sender: senderName || "Anonyme",
+        }),
+      });
+
+      const data = await res.json();
+      if (data.ok) {
+        alert("✅ Message envoyé !");
+        setMessageText("");
+        setSenderName("");
+        setShowMessageModal(false);
+      } else {
+        alert("❌ Erreur lors de l'envoi");
+      }
+    } catch (err) {
+      alert("❌ Erreur");
+    } finally {
+      setSendingMessage(false);
+    }
   }
 
   const todayDate = new Date().toLocaleDateString("fr-FR");
@@ -91,6 +128,24 @@ export default function Home() {
           <div className="label">Schémas</div>
           <div className="meta">Consulter les techniques</div>
         </button>
+
+        {/* Message */}
+        <button
+          onClick={() => setShowMessageModal(true)}
+          style={{
+            gridColumn: "1 / -1",
+            padding: 16,
+            background: "#9B59B6",
+            color: "#fff",
+            border: "none",
+            borderRadius: 10,
+            fontWeight: 700,
+            fontSize: 16,
+            cursor: "pointer",
+          }}
+        >
+          💬 Message
+        </button>
       </div>
 
       {/* Picker calendrier */}
@@ -120,6 +175,76 @@ export default function Home() {
                 {m}
               </button>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Modale Message */}
+      {showMessageModal && (
+        <div
+          className="modal-backdrop"
+          onClick={() => setShowMessageModal(false)}
+        >
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3>📬 Envoyer un message</h3>
+
+            <div style={{ marginBottom: 14 }}>
+              <span className="field-label">Votre nom (optionnel)</span>
+              <input
+                type="text"
+                placeholder="Ex : Chef d'équipe"
+                value={senderName}
+                onChange={(e) => setSenderName(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "12px 14px",
+                  fontSize: 16,
+                  border: "1.5px solid var(--line)",
+                  borderRadius: 10,
+                  boxSizing: "border-box",
+                  marginBottom: 12,
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: 14 }}>
+              <span className="field-label">Message</span>
+              <textarea
+                placeholder="Écris ton message ici..."
+                value={messageText}
+                onChange={(e) => setMessageText(e.target.value)}
+                autoFocus
+                style={{
+                  width: "100%",
+                  padding: "12px 14px",
+                  fontSize: 14,
+                  border: "1.5px solid var(--line)",
+                  borderRadius: 10,
+                  minHeight: 100,
+                  fontFamily: "inherit",
+                  boxSizing: "border-box",
+                  marginBottom: 12,
+                }}
+              />
+            </div>
+
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                className="btn btn-primary"
+                style={{ flex: 1 }}
+                onClick={sendMessageToTelegram}
+                disabled={sendingMessage}
+              >
+                {sendingMessage ? "Envoi..." : "✅ Envoyer"}
+              </button>
+              <button
+                className="btn btn-ghost"
+                style={{ flex: 1 }}
+                onClick={() => setShowMessageModal(false)}
+              >
+                ❌ Annuler
+              </button>
+            </div>
           </div>
         </div>
       )}
