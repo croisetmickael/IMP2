@@ -1,51 +1,37 @@
 // pages/_app.js
-import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
 import { Oswald, Inter } from "next/font/google";
+import Head from "next/head";
 import "../styles/globals.css";
 
-const oswald = Oswald({ subsets: ["latin"] });
-const inter = Inter({ subsets: ["latin"] });
+const display = Oswald({
+  subsets: ["latin"],
+  weight: ["500", "700"],
+  variable: "--font-display",
+});
 
-function MyApp({ Component, pageProps }) {
-  const router = useRouter();
-  const [isReady, setIsReady] = useState(false);
+const body = Inter({
+  subsets: ["latin"],
+  weight: ["400", "600", "700"],
+  variable: "--font-body",
+});
 
-  useEffect(() => {
-    if (!router.isReady) return;
-
-    const token = localStorage.getItem("smpm_auth");
-    const isLoginPage = router.pathname === "/login";
-
-    // Si on est sur login ET authentifié → aller à l'accueil
-    if (isLoginPage && token === "authenticated") {
-      router.push("/");
-      return;
-    }
-
-    // Si on n'est pas sur login ET pas authentifié → aller à login
-    if (!isLoginPage && token !== "authenticated") {
-      router.push("/login");
-      return;
-    }
-
-    setIsReady(true);
-  }, [router.isReady, router.pathname]);
-
-  if (!router.isReady || !isReady) {
-    return null;
-  }
-
+export default function App({ Component, pageProps }) {
   return (
-    <div style={{ fontFamily: inter.style.fontFamily }}>
-      <style jsx global>{`
-        * {
-          font-family: ${inter.style.fontFamily};
-        }
-      `}</style>
-      <Component {...pageProps} />
-    </div>
+    <>
+      <Head>
+        <title>SMPM — Suivi GRIMP 80</title>
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, maximum-scale=1"
+        />
+        <meta name="theme-color" content="#12294a" />
+        <link rel="manifest" href="/manifest.json" />
+        <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+        <link rel="icon" href="/icons/icon-192.png" />
+      </Head>
+      <div className={`${display.variable} ${body.variable}`}>
+        <Component {...pageProps} />
+      </div>
+    </>
   );
 }
-
-export default MyApp;

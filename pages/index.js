@@ -8,168 +8,120 @@ export default function Home() {
   const [today, setToday] = useState(null);
   const [allManoeuvres, setAllManoeuvres] = useState([]);
   const [openPicker, setOpenPicker] = useState(false);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchToday();
+    fetch("/api/today")
+      .then((r) => r.json())
+      .then((data) => {
+        setToday(data);
+        if (!data.hasTodayManoeuvre && data.allManoeuvres) {
+          setAllManoeuvres(data.allManoeuvres);
+        }
+      })
+      .catch(() => {});
   }, []);
 
-  async function fetchToday() {
-    try {
-      const res = await fetch("/api/today");
-      const data = await res.json();
-      setToday(data);
-      setAllManoeuvres(data.allManoeuvres || []);
-      setLoading(false);
-    } catch (err) {
-      console.error("Erreur:", err);
-      setLoading(false);
-    }
-  }
-
   function handleManoeuvreSelection(manoeuvre) {
-    const lieu = manoeuvre.split(" - ")[1];
-    router.push(`/manoeuvre?type=manoeuvre&lieu=${encodeURIComponent(lieu)}`);
+    router.push(`/manoeuvre?type=manoeuvre&lieu=${encodeURIComponent(manoeuvre)}`);
   }
 
-  if (loading) {
-    return (
-      <Shell title="SMPM">
-        <div style={{ textAlign: "center", padding: 20 }}>Chargement...</div>
-      </Shell>
-    );
-  }
-
-  const todayDate = today?.today || new Date().toLocaleDateString("fr-FR");
+  const todayDate = new Date().toLocaleDateString("fr-FR");
 
   return (
-    <Shell title="SMPM" subtitle="Accueil">
-      {/* Boutons principaux */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
+    <Shell title="SMPM">
+      <div className="home-grid">
         {/* Intervention */}
         <button
+          className="home-tile primary"
           onClick={() => router.push("/manoeuvre?type=intervention")}
-          style={{
-            padding: 16,
-            background: "var(--navy)",
-            color: "#fff",
-            border: "none",
-            borderRadius: 10,
-            fontWeight: 700,
-            fontSize: 16,
-            cursor: "pointer",
-          }}
         >
-          🚨 Intervention
+          <div className="eyebrow">Aujourd'hui</div>
+          <div className="label">{todayDate}</div>
+          <div className="meta">INTERVENTION</div>
+        </button>
+
+        {/* Manœuvre du jour ou sélection */}
+        {today?.hasTodayManoeuvre ? (
+          <button
+            className="home-tile"
+            onClick={() =>
+              router.push(
+                `/manoeuvre?type=manoeuvre&lieu=${encodeURIComponent(today.manoeuvre)}`
+              )
+            }
+          >
+            <div className="eyebrow">{todayDate}</div>
+            <div className="label" style={{ fontSize: 16 }}>
+              {today.manoeuvre}
+            </div>
+            <div className="meta">{today.lieu || "Manœuvre"}</div>
+          </button>
+        ) : (
+          <button
+            className="home-tile"
+            onClick={() => setOpenPicker(true)}
+          >
+            <div className="eyebrow">Calendrier</div>
+            <div className="label" style={{ fontSize: 16 }}>
+              Manœuvre
+            </div>
+            <div className="meta">Choisir dans le calendrier</div>
+          </button>
+        )}
+
+        {/* Suivi */}
+        <button
+          className="home-tile"
+          onClick={() => router.push("/suivi")}
+        >
+          <div className="eyebrow">Historique</div>
+          <div className="label">Suivi</div>
+          <div className="meta">Mes manœuvres</div>
         </button>
 
         {/* Inventaire */}
         <button
+          className="home-tile"
           onClick={() => router.push("/inventaire")}
-          style={{
-            padding: 16,
-            background: "var(--navy)",
-            color: "#fff",
-            border: "none",
-            borderRadius: 10,
-            fontWeight: 700,
-            fontSize: 16,
-            cursor: "pointer",
-          }}
         >
-          📦 Inventaire
-        </button>
-
-        {/* Manoeuvre */}
-        <button
-          onClick={() => {
-            if (today?.hasTodayManoeuvre) {
-              handleManoeuvreSelection(`${todayDate} - ${today.todayManoeuvre}`);
-            } else {
-              setOpenPicker(!openPicker);
-            }
-          }}
-          disabled={!today?.hasTodayManoeuvre && allManoeuvres.length === 0}
-          style={{
-            gridColumn: "1 / -1",
-            padding: 16,
-            background: today?.hasTodayManoeuvre ? "var(--gold)" : "#ccc",
-            color: today?.hasTodayManoeuvre ? "var(--navy)" : "#666",
-            border: "none",
-            borderRadius: 10,
-            fontWeight: 700,
-            fontSize: 16,
-            cursor: today?.hasTodayManoeuvre || allManoeuvres.length > 0 ? "pointer" : "not-allowed",
-          }}
-        >
-          📋 {todayDate}
-          {today?.hasTodayManoeuvre ? ` - ${today.todayManoeuvre}` : " - Pas de manoeuvre"}
-        </button>
-
-        {/* Suivi */}
-        <button
-          onClick={() => router.push("/suivi")}
-          style={{
-            gridColumn: "1 / -1",
-            padding: 16,
-            background: "var(--navy)",
-            color: "#fff",
-            border: "none",
-            borderRadius: 10,
-            fontWeight: 700,
-            fontSize: 16,
-            cursor: "pointer",
-          }}
-        >
-          📊 Suivi
-        </button>
-
-        {/* Schémas */}
-        <button
-          onClick={() => router.push("/schemas")}
-          style={{
-            gridColumn: "1 / -1",
-            padding: 16,
-            background: "#E67E22",
-            color: "#fff",
-            border: "none",
-            borderRadius: 10,
-            fontWeight: 700,
-            fontSize: 16,
-            cursor: "pointer",
-          }}
-        >
-          📄 Schémas Manoeuvres
+          <div className="eyebrow">Contrôle</div>
+          <div className="label">Inventaire</div>
+          <div className="meta">Matériel GRIMP</div>
         </button>
       </div>
 
-      {/* Picker Calendrier */}
-      {!today?.hasTodayManoeuvre && openPicker && allManoeuvres.length > 0 && (
-        <div className="card">
-          <span className="field-label">Choisir une manœuvre :</span>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 8 }}>
+      {/* Picker pour choisir une manœuvre du calendrier */}
+      {openPicker && allManoeuvres.length > 0 && (
+        <div className="sheet-backdrop" onClick={() => setOpenPicker(false)}>
+          <div className="sheet" onClick={(e) => e.stopPropagation()}>
+            <h3>Choisir une manœuvre</h3>
             {allManoeuvres.map((m, i) => (
               <button
                 key={i}
+                type="button"
+                className="sheet-option"
                 onClick={() => {
-                  handleManoeuvreSelection(m);
+                  handleManoeuvreSelection(m.manoeuvre);
                   setOpenPicker(false);
                 }}
                 style={{
-                  padding: 12,
-                  background: "#f5f5f5",
-                  color: "var(--navy)",
-                  border: "1.5px solid var(--line)",
-                  borderRadius: 8,
-                  fontWeight: 600,
-                  fontSize: 14,
-                  cursor: "pointer",
-                  textAlign: "left",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "flex-start",
+                  gap: 4,
                 }}
               >
-                {m}
+                <span style={{ fontWeight: 700, fontSize: 15 }}>
+                  {m.manoeuvre}
+                </span>
+                <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>
+                  {m.date} — {m.lieu}
+                </span>
               </button>
             ))}
+            <button className="sheet-cancel" onClick={() => setOpenPicker(false)}>
+              Fermer
+            </button>
           </div>
         </div>
       )}
