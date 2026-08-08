@@ -2,14 +2,21 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import Shell from "../components/Shell";
+import { getRandomMatricule } from "../lib/helpers";
 
 export default function Home() {
   const router = useRouter();
   const [today, setToday] = useState(null);
   const [allManoeuvres, setAllManoeuvres] = useState([]);
   const [openPicker, setOpenPicker] = useState(false);
+  const [showMessageModal, setShowMessageModal] = useState(false);
+  const [messageText, setMessageText] = useState("");
+  const [matricule, setMatricule] = useState("");
+  const [randomMatricule, setRandomMatricule] = useState("");
+  const [sendingMessage, setSendingMessage] = useState(false);
 
   useEffect(() => {
+    setRandomMatricule(getRandomMatricule());
     fetch("/api/today")
       .then((r) => r.json())
       .then((data) => {
@@ -23,6 +30,43 @@ export default function Home() {
 
   function handleManoeuvreSelection(manoeuvre) {
     router.push(`/manoeuvre?type=manoeuvre&lieu=${encodeURIComponent(manoeuvre)}`);
+  }
+
+  async function sendMessageToTelegram() {
+    if (!messageText.trim()) {
+      alert("Message vide");
+      return;
+    }
+    if (!matricule.trim()) {
+      alert("Matricule requis");
+      return;
+    }
+
+    setSendingMessage(true);
+    try {
+      const res = await fetch("/api/send-message-telegram", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: messageText,
+          matricule: matricule.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (data.ok) {
+        alert("✅ Message envoyé !");
+        setMessageText("");
+        setMatricule("");
+        setShowMessageModal(false);
+      } else {
+        alert(`❌ ${data.error || "Erreur lors de l'envoi"}`);
+      }
+    } catch (err) {
+      alert("❌ Erreur");
+    } finally {
+      setSendingMessage(false);
+    }
   }
 
   const todayDate = new Date().toLocaleDateString("fr-FR");
@@ -99,6 +143,20 @@ export default function Home() {
           <div className="label">Schémas</div>
           <div className="meta">Consulter les techniques</div>
         </button>
+
+        {/* Message */}
+        <button
+          className="home-tile"
+          onClick={() => setShowMessageModal(true)}
+          style={{ 
+            gridColumn: "1 / -1",
+            background: "#9B59B6"
+          }}
+        >
+          <div className="eyebrow">Communication</div>
+          <div className="label">Message</div>
+          <div className="meta">Envoyer une alerte</div>
+        </button>
       </div>
 
       {/* Picker pour choisir une manœuvre du calendrier */}
@@ -133,6 +191,98 @@ export default function Home() {
             <button className="sheet-cancel" onClick={() => setOpenPicker(false)}>
               Fermer
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modale Message */}
+      {showMessageModal && (
+        <div
+          className="modal-backdrop"
+          onClick={() => setShowMessageModal(false)}
+          style={{
+            position: "fixed",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            top: "auto",
+            background: "rgba(0,0,0,0.3)",
+            display: "flex",
+            alignItems: "flex-end",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+        >
+          <div
+            className="modal"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "100%",
+              maxWidth: "600px",
+              borderRadius: "20px 20px 0 0",
+              marginBottom: 0,
+            }}
+          >
+            <h3>📬 Envoyer un message</h3>
+
+            <div style={{ marginBottom: 14 }}>
+              <span className="field-label">Matricule</span>
+              <input
+                type="tel"
+                inputMode="numeric"
+                placeholder={`Ex : ${randomMatricule}`}
+                value={matricule}
+                onChange={(e) => setMatricule(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "12px 14px",
+                  fontSize: 16,
+                  border: "1.5px solid var(--line)",
+                  borderRadius: 10,
+                  boxSizing: "border-box",
+                  marginBottom: 12,
+                }}
+                autoFocus
+              />
+            </div>
+
+            <div style={{ marginBottom: 14 }}>
+              <span className="field-label">Message</span>
+              <textarea
+                placeholder="Écris ton message ici..."
+                value={messageText}
+                onChange={(e) => setMessageText(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "12px 14px",
+                  fontSize: 14,
+                  border: "1.5px solid var(--line)",
+                  borderRadius: 10,
+                  minHeight: 100,
+                  fontFamily: "inherit",
+                  boxSizing: "border-box",
+                  marginBottom: 12,
+                }}
+              />
+            </div>
+
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                className="btn btn-primary"
+                style={{ flex: 1 }}
+                onClick={sendMessageToTelegram}
+                disabled={sendingMessage}
+              >
+                {sendingMessage ? "Envoi..." : "✅ Envoyer"}
+              </button>
+              <button
+                className="btn btn-ghost"
+                style={{ flex: 1 }}
+                onClick={() => setShowMessageModal(false)}
+              >
+                ❌ Annuler
+              </button>
+            </div>
           </div>
         </div>
       )}
