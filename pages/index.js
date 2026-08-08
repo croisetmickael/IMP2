@@ -28,7 +28,6 @@ export default function Home() {
   }
 
   function handleManoeuvreSelection(manoeuvre) {
-    // Extrait le lieu de la manoeuvre
     const lieu = manoeuvre.split(" - ")[1];
     router.push(`/manoeuvre?type=manoeuvre&lieu=${encodeURIComponent(lieu)}`);
   }
@@ -107,6 +106,24 @@ export default function Home() {
           {today?.hasTodayManoeuvre ? ` - ${today.todayManoeuvre}` : " - Pas de manoeuvre"}
         </button>
 
+        {/* Suivi */}
+        <button
+          onClick={() => router.push("/suivi")}
+          style={{
+            gridColumn: "1 / -1",
+            padding: 16,
+            background: "var(--navy)",
+            color: "#fff",
+            border: "none",
+            borderRadius: 10,
+            fontWeight: 700,
+            fontSize: 16,
+            cursor: "pointer",
+          }}
+        >
+          📊 Suivi
+        </button>
+
         {/* Schémas */}
         <button
           onClick={() => router.push("/schemas")}
@@ -126,7 +143,7 @@ export default function Home() {
         </button>
       </div>
 
-      {/* Picker Calendrier - Seulement si pas de manoeuvre du jour */}
+      {/* Picker Calendrier */}
       {!today?.hasTodayManoeuvre && openPicker && allManoeuvres.length > 0 && (
         <div className="card">
           <span className="field-label">Choisir une manœuvre :</span>
