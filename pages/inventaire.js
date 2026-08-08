@@ -212,13 +212,13 @@ export default function Inventaire() {
       ) : (
         <>
           {Object.entries(grouped).map(([emplacement, list]) => (
-            <div key={emplacement}>
-              <div className="inv-group-title">{emplacement}</div>
+            <div key={emplacement} style={{ marginBottom: 6 }}>
+              <div className="inv-group-title" style={{ marginBottom: 4, marginTop: 4 }}>{emplacement}</div>
               {list.map((it) => {
                 const key = itemKey(it);
                 const status = statuses[key];
                 return (
-                  <div className="inv-row" key={key}>
+                  <div className="inv-row" key={key} style={{ marginBottom: 3 }}>
                     <div className="inv-article-info">
                       <div className={`inv-name ${status === "nonok" ? "nonok" : ""}`}>
                         {it.article}
