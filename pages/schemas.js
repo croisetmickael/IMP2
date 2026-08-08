@@ -35,18 +35,17 @@ const MANOEUVRES = [
 ];
 
 export default function Schemas() {
-  function openPDF(file) {
-    window.open(file, "_blank");
-  }
-
   return (
     <Shell title="SMPM" subtitle="Schémas Manoeuvres" showBack>
       <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 12 }}>
         {MANOEUVRES.map((m) => (
-          <button
+          
             key={m.id}
-            onClick={() => openPDF(m.file)}
+            href={m.file}
+            target="_blank"
+            rel="noopener noreferrer"
             style={{
+              display: "block",
               padding: 16,
               background: "var(--navy)",
               color: "#fff",
@@ -55,13 +54,15 @@ export default function Schemas() {
               fontWeight: 600,
               fontSize: 16,
               cursor: "pointer",
+              textDecoration: "none",
+              textAlign: "center",
               transition: "background 0.2s",
             }}
             onMouseOver={(e) => e.target.style.background = "#1a3a5c"}
             onMouseOut={(e) => e.target.style.background = "var(--navy)"}
           >
             📄 {m.label}
-          </button>
+          </a>
         ))}
       </div>
     </Shell>
