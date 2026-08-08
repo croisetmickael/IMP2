@@ -204,34 +204,67 @@ export default function Home() {
                   borderLeft: "4px solid var(--gold)",
                 }}
               >
-                <button
-                  type="button"
-                  className="sheet-option"
-                  onClick={() => {
-                    handleManoeuvreSelection(m.manoeuvre);
-                    setOpenPicker(false);
-                  }}
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "flex-start",
-                    gap: 4,
-                    width: "100%",
-                    textAlign: "left",
-                  }}
-                >
-                  <span style={{ fontWeight: 700, fontSize: 15 }}>
+                {/* Première ligne : Manoeuvre + GPS à droite */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, marginBottom: 6 }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleManoeuvreSelection(m.manoeuvre);
+                      setOpenPicker(false);
+                    }}
+                    style={{
+                      flex: 1,
+                      textAlign: "left",
+                      fontWeight: 700,
+                      fontSize: 15,
+                      background: "none",
+                      border: "none",
+                      color: "var(--navy)",
+                      padding: 0,
+                      cursor: "pointer",
+                    }}
+                  >
                     {m.manoeuvre}
-                  </span>
-                  <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>
-                    {m.date} — {m.lieu}
-                  </span>
-                  {m.observation && (
-                    <span style={{ fontSize: 12, color: "var(--ink-soft)", marginTop: 4 }}>
-                      📝 {m.observation}
-                    </span>
+                  </button>
+                  
+                  {/* Bouton GPS à droite */}
+                  {m.gps && (
+                    <button
+                      onClick={(e) => openGoogleMaps(e, m.gps)}
+                      style={{
+                        width: 32,
+                        height: 32,
+                        background: "#E74C3C",
+                        color: "#fff",
+                        border: "none",
+                        borderRadius: "50%",
+                        fontWeight: 700,
+                        fontSize: 16,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+                      }}
+                      title="Ouvrir Google Maps"
+                    >
+                      📍
+                    </button>
                   )}
-                </button>
+                </div>
+
+                {/* Deuxième ligne : Date et Lieu */}
+                <div style={{ fontSize: 12, color: "var(--ink-soft)", marginBottom: 6 }}>
+                  {m.date} — {m.lieu}
+                </div>
+
+                {/* Troisième ligne : Observation (si présente) */}
+                {m.observation && (
+                  <div style={{ fontSize: 12, color: "var(--ink-soft)" }}>
+                    📝 {m.observation}
+                  </div>
+                )}
               </div>
             ))}
             <button className="sheet-cancel" onClick={() => setOpenPicker(false)}>
