@@ -38,32 +38,13 @@ export default function Schemas() {
   return (
     <Shell title="SMPM" subtitle="Schémas Manoeuvres" showBack>
       <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 12 }}>
-        {MANOEUVRES.map((m) => (
-          
-            key={m.id}
-            href={m.file}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: "block",
-              padding: 16,
-              background: "var(--navy)",
-              color: "#fff",
-              border: "none",
-              borderRadius: 10,
-              fontWeight: 600,
-              fontSize: 16,
-              cursor: "pointer",
-              textDecoration: "none",
-              textAlign: "center",
-              transition: "background 0.2s",
-            }}
-            onMouseOver={(e) => e.target.style.background = "#1a3a5c"}
-            onMouseOut={(e) => e.target.style.background = "var(--navy)"}
-          >
-            📄 {m.label}
-          </a>
-        ))}
+        {MANOEUVRES.map((m) => {
+          return (
+            <a key={m.id} href={m.file} target="_blank" rel="noopener noreferrer" style={{ display: "block", padding: 16, background: "var(--navy)", color: "#fff", border: "none", borderRadius: 10, fontWeight: 600, fontSize: 16, cursor: "pointer", textDecoration: "none", textAlign: "center" }}>
+              📄 {m.label}
+            </a>
+          );
+        })}
       </div>
     </Shell>
   );
