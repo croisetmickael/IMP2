@@ -108,18 +108,22 @@ export default function Inventaire() {
 
     setSubmitting(true);
     
+    // Vérifier s'il y a des Non OK
     const hasNonOk = Object.values(statuses).some(s => s === "nonok");
     
     let itemsNonOk;
     
     if (!hasNonOk) {
+      // Tout est OK → "Baroud 1 - Conforme" ou "Baroud 2 - Conforme"
       if (activeGroup === "baroud") {
         itemsNonOk = [`Baroud ${baroudChoice} - Conforme`];
       } else {
+        // Pour autres groupes
         const groupLabel = INVENTORY_GROUPS.find(g => g.id === activeGroup)?.label || activeGroup;
         itemsNonOk = [`${groupLabel} - Conforme`];
       }
     } else {
+      // Il y a des Non OK → format habituel avec Baroud 1/2
       const byLocation = {};
       
       Object.entries(statuses).forEach(([key, status]) => {
@@ -206,7 +210,6 @@ export default function Inventaire() {
         ))}
       </div>
 
-      {/* Articles à cocher */}
       {loading ? (
         <div style={{ textAlign: "center", padding: 20, color: "var(--ink-soft)" }}>Chargement…</div>
       ) : (
@@ -300,10 +303,9 @@ export default function Inventaire() {
         </div>
       )}
 
-      {/* VALIDATION - Juste après les articles */}
-      <div style={{ marginTop: 20 }}>
+      {/* Form validation */}
+      <div className="sticky-footer">
         <div className="card">
-          {/* Nombre articles contrôlés */}
           <span className="field-label">
             {checkedCount} article{checkedCount > 1 ? "s" : ""} contrôlé
             {checkedCount > 1 ? "s" : ""}
@@ -352,7 +354,6 @@ export default function Inventaire() {
             </>
           )}
 
-          {/* Observation */}
           <span className="field-label">Observation</span>
           <textarea
             value={observation}
@@ -361,7 +362,6 @@ export default function Inventaire() {
             style={{ marginBottom: 12 }}
           />
 
-          {/* Matricule */}
           <span className="field-label">Matricule</span>
           <input
             type="tel"
@@ -372,29 +372,8 @@ export default function Inventaire() {
             style={{ marginBottom: 12 }}
           />
 
-          {/* Bouton Intervention */}
-          <button
-            type="button"
-            onClick={() => setObservation(observation ? observation + ", intervention" : "intervention")}
-            style={{
-              width: "100%",
-              padding: 12,
-              background: "var(--gold)",
-              color: "var(--navy)",
-              border: "none",
-              borderRadius: 10,
-              fontWeight: 700,
-              cursor: "pointer",
-              marginBottom: 12,
-            }}
-          >
-            + Intervention
-          </button>
-
-          {/* Erreur */}
           {error && <div className="alert alert-error">{error}</div>}
 
-          {/* Bouton Valider */}
           <button
             className="btn btn-primary"
             disabled={submitting}

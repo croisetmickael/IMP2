@@ -69,59 +69,57 @@ export default function Home() {
           </button>
         )}
 
-        {/* Suivi */}
-        <button
-          className="home-tile"
-          onClick={() => router.push("/suivi")}
-        >
-          <div className="eyebrow">Historique</div>
-          <div className="label">Suivi</div>
-          <div className="meta">Mes manœuvres</div>
-        </button>
-
         {/* Inventaire */}
         <button
           className="home-tile"
           onClick={() => router.push("/inventaire")}
         >
-          <div className="eyebrow">Contrôle</div>
+          <div className="eyebrow">Matériel</div>
           <div className="label">Inventaire</div>
-          <div className="meta">Matériel GRIMP</div>
+          <div className="meta">Vérifier les équipements</div>
+        </button>
+
+        {/* Schémas Manoeuvres */}
+        <button
+          className="home-tile schemas"
+          onClick={() => router.push("/schemas")}
+          style={{
+            background: "linear-gradient(135deg, #E67E22 0%, #D35400 100%)",
+          }}
+        >
+          <div className="eyebrow">Documentation</div>
+          <div className="label">Schémas</div>
+          <div className="meta">Consulter les techniques</div>
         </button>
       </div>
 
-      {/* Picker pour choisir une manœuvre du calendrier */}
+      {/* Picker calendrier */}
       {openPicker && allManoeuvres.length > 0 && (
-        <div className="sheet-backdrop" onClick={() => setOpenPicker(false)}>
-          <div className="sheet" onClick={(e) => e.stopPropagation()}>
-            <h3>Choisir une manœuvre</h3>
+        <div className="card">
+          <span className="field-label">Choisir une manœuvre :</span>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 8 }}>
             {allManoeuvres.map((m, i) => (
               <button
                 key={i}
-                type="button"
-                className="sheet-option"
                 onClick={() => {
-                  handleManoeuvreSelection(m.manoeuvre);
+                  handleManoeuvreSelection(m);
                   setOpenPicker(false);
                 }}
                 style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "flex-start",
-                  gap: 4,
+                  padding: 12,
+                  background: "#f5f5f5",
+                  color: "var(--navy)",
+                  border: "1.5px solid var(--line)",
+                  borderRadius: 8,
+                  fontWeight: 600,
+                  fontSize: 14,
+                  cursor: "pointer",
+                  textAlign: "left",
                 }}
               >
-                <span style={{ fontWeight: 700, fontSize: 15 }}>
-                  {m.manoeuvre}
-                </span>
-                <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>
-                  {m.date} — {m.lieu}
-                </span>
+                {m}
               </button>
             ))}
-            <button className="sheet-cancel" onClick={() => setOpenPicker(false)}>
-              Fermer
-            </button>
           </div>
         </div>
       )}
