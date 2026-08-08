@@ -32,6 +32,11 @@ const MANOEUVRES = [
     label: "Poulie de Renvoi - Tyrolienne",
     file: "/schemas/1786211518327_PRM_sur_Tyro___TRIPODE__.pdf",
   },
+  {
+    id: "pantoire-blackz",
+    label: "Pantoire BLACK-Z",
+    file: "/schemas/Pantoire_BLACK-Z_2_versions_1_page.pdf",
+  },
 ];
 
 export default function Schemas() {
