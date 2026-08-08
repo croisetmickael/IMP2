@@ -8,19 +8,12 @@ export default function App({ Component, pageProps }) {
 
   useEffect(() => {
     // Vérifier l'authentification
-    const checkAuth = () => {
-      // Vider le token à chaque rechargement pour forcer la re-authentification
-      if (typeof window !== "undefined") {
-        localStorage.removeItem("smpm_auth");
-      }
-      
-      // Si on n'est pas sur la page login, rediriger
-      if (router.pathname !== "/login") {
-        router.push("/login");
-      }
-    };
-
-    checkAuth();
+    const token = sessionStorage.getItem("smpm_auth");
+    
+    // Si pas de token et qu'on n'est pas sur login → rediriger
+    if (!token && router.pathname !== "/login") {
+      router.push("/login");
+    }
   }, [router.pathname]);
 
   return <Component {...pageProps} />;
