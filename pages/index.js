@@ -8,117 +8,92 @@ export default function Home() {
   const [today, setToday] = useState(null);
   const [allManoeuvres, setAllManoeuvres] = useState([]);
   const [openPicker, setOpenPicker] = useState(false);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchToday();
+    fetch("/api/today")
+      .then((r) => r.json())
+      .then((data) => {
+        setToday(data);
+        if (!data.hasTodayManoeuvre && data.allManoeuvres) {
+          setAllManoeuvres(data.allManoeuvres);
+        }
+      })
+      .catch(() => {});
   }, []);
-
-  async function fetchToday() {
-    try {
-      const res = await fetch("/api/today");
-      const data = await res.json();
-      setToday(data);
-      if (!data.hasTodayManoeuvre && data.allManoeuvres) {
-        setAllManoeuvres(data.allManoeuvres);
-      }
-      setOpenPicker(!data.hasTodayManoeuvre);
-    } catch (err) {
-      console.error("Erreur:", err);
-    } finally {
-      setLoading(false);
-    }
-  }
 
   function handleManoeuvreSelection(manoeuvre) {
     router.push(`/manoeuvre?type=manoeuvre&lieu=${encodeURIComponent(manoeuvre)}`);
-    setOpenPicker(false);
   }
 
-  if (loading) {
-    return (
-      <Shell title="SMPM">
-        <div style={{ textAlign: "center", padding: 20 }}>Chargement...</div>
-      </Shell>
-    );
-  }
+  const todayDate = new Date().toLocaleDateString("fr-FR");
 
   return (
-    <Shell title="SMPM" subtitle="Accueil">
-      {/* Boutons principaux */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
+    <Shell title="SMPM">
+      <div className="home-grid">
         {/* Intervention */}
         <button
+          className="home-tile primary"
           onClick={() => router.push("/manoeuvre?type=intervention")}
-          style={{
-            padding: 16,
-            background: "var(--navy)",
-            color: "#fff",
-            border: "none",
-            borderRadius: 10,
-            fontWeight: 700,
-            fontSize: 16,
-            cursor: "pointer",
-          }}
         >
-          🚨 Intervention
+          <div className="eyebrow">Aujourd'hui</div>
+          <div className="label">{todayDate}</div>
+          <div className="meta">INTERVENTION</div>
         </button>
+
+        {/* Manœuvre du jour ou sélection */}
+        {today?.hasTodayManoeuvre ? (
+          <button
+            className="home-tile"
+            onClick={() =>
+              router.push(
+                `/manoeuvre?type=manoeuvre&lieu=${encodeURIComponent(today.manoeuvre)}`
+              )
+            }
+          >
+            <div className="eyebrow">{todayDate}</div>
+            <div className="label" style={{ fontSize: 16 }}>
+              {today.manoeuvre}
+            </div>
+            <div className="meta">{today.lieu || "Manœuvre"}</div>
+          </button>
+        ) : (
+          <button
+            className="home-tile"
+            onClick={() => setOpenPicker(true)}
+          >
+            <div className="eyebrow">Calendrier</div>
+            <div className="label" style={{ fontSize: 16 }}>
+              Manœuvre
+            </div>
+            <div className="meta">Choisir dans le calendrier</div>
+          </button>
+        )}
 
         {/* Inventaire */}
         <button
+          className="home-tile"
           onClick={() => router.push("/inventaire")}
-          style={{
-            padding: 16,
-            background: "var(--navy)",
-            color: "#fff",
-            border: "none",
-            borderRadius: 10,
-            fontWeight: 700,
-            fontSize: 16,
-            cursor: "pointer",
-          }}
         >
-          📦 Inventaire
+          <div className="eyebrow">Matériel</div>
+          <div className="label">Inventaire</div>
+          <div className="meta">Vérifier les équipements</div>
         </button>
 
-        {/* Manoeuvre */}
+        {/* Schémas Manoeuvres */}
         <button
-          onClick={() => setOpenPicker(!openPicker)}
-          style={{
-            gridColumn: "1 / -1",
-            padding: 16,
-            background: "var(--gold)",
-            color: "var(--navy)",
-            border: "none",
-            borderRadius: 10,
-            fontWeight: 700,
-            fontSize: 16,
-            cursor: "pointer",
-          }}
-        >
-          📋 Manoeuvre
-        </button>
-
-        {/* Schémas */}
-        <button
+          className="home-tile schemas"
           onClick={() => router.push("/schemas")}
           style={{
-            gridColumn: "1 / -1",
-            padding: 16,
-            background: "#E67E22",
-            color: "#fff",
-            border: "none",
-            borderRadius: 10,
-            fontWeight: 700,
-            fontSize: 16,
-            cursor: "pointer",
+            background: "linear-gradient(135deg, #E67E22 0%, #D35400 100%)",
           }}
         >
-          📄 Schémas Manoeuvres
+          <div className="eyebrow">Documentation</div>
+          <div className="label">Schémas</div>
+          <div className="meta">Consulter les techniques</div>
         </button>
       </div>
 
-      {/* Picker Calendrier */}
+      {/* Picker calendrier */}
       {openPicker && allManoeuvres.length > 0 && (
         <div className="card">
           <span className="field-label">Choisir une manœuvre :</span>
@@ -126,7 +101,10 @@ export default function Home() {
             {allManoeuvres.map((m, i) => (
               <button
                 key={i}
-                onClick={() => handleManoeuvreSelection(m)}
+                onClick={() => {
+                  handleManoeuvreSelection(m);
+                  setOpenPicker(false);
+                }}
                 style={{
                   padding: 12,
                   background: "#f5f5f5",
