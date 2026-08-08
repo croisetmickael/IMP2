@@ -88,6 +88,17 @@ export default function Home() {
           <div className="label">Inventaire</div>
           <div className="meta">Matériel GRIMP</div>
         </button>
+
+        {/* Schémas Manoeuvres */}
+        <button
+          className="home-tile"
+          onClick={() => router.push("/schemas")}
+          style={{ gridColumn: "1 / -1" }}
+        >
+          <div className="eyebrow">Documentation</div>
+          <div className="label">Schémas</div>
+          <div className="meta">Consulter les techniques</div>
+        </button>
       </div>
 
       {/* Picker pour choisir une manœuvre du calendrier */}
