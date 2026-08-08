@@ -69,7 +69,7 @@ export default function Home() {
     }
   }
 
-  const todayDate = new Date().toLocaleDateString("fr-FR");
+  const todayDate = today?.today || new Date().toLocaleDateString("fr-FR");
 
   return (
     <Shell title="SMPM">
@@ -84,34 +84,25 @@ export default function Home() {
           <div className="meta">INTERVENTION</div>
         </button>
 
-        {/* Manœuvre du jour ou sélection */}
-        {today?.hasTodayManoeuvre ? (
-          <button
-            className="home-tile"
-            onClick={() =>
-              router.push(
-                `/manoeuvre?type=manoeuvre&lieu=${encodeURIComponent(today.manoeuvre)}`
-              )
+        {/* Manœuvre */}
+        <button
+          className="home-tile"
+          onClick={() => {
+            if (today?.hasTodayManoeuvre) {
+              handleManoeuvreSelection(today.todayManoeuvre);
+            } else {
+              setOpenPicker(true);
             }
-          >
-            <div className="eyebrow">{todayDate}</div>
-            <div className="label" style={{ fontSize: 16 }}>
-              {today.manoeuvre}
-            </div>
-            <div className="meta">{today.lieu || "Manœuvre"}</div>
-          </button>
-        ) : (
-          <button
-            className="home-tile"
-            onClick={() => setOpenPicker(true)}
-          >
-            <div className="eyebrow">Calendrier</div>
-            <div className="label" style={{ fontSize: 16 }}>
-              Manœuvre
-            </div>
-            <div className="meta">Choisir dans le calendrier</div>
-          </button>
-        )}
+          }}
+        >
+          <div className="eyebrow">{todayDate}</div>
+          <div className="label" style={{ fontSize: 16 }}>
+            {today?.todayManoeuvre || "Manœuvre"}
+          </div>
+          <div className="meta">
+            {today?.hasTodayManoeuvre ? "Entraînement du jour" : "Choisir dans le calendrier"}
+          </div>
+        </button>
 
         {/* Suivi */}
         <button
