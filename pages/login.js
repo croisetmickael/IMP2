@@ -27,7 +27,7 @@ export default function Login() {
   function handleSubmitCode() {
     setError("");
     
-    if (code.toUpperCase() === "SMPM") {
+    if (code.toUpperCase() === "SMPM1") {
       // Code correct
       localStorage.setItem("smpm_auth", "authenticated");
       localStorage.removeItem("smpm_attempts");
