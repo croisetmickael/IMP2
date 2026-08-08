@@ -1,43 +1,33 @@
 // pages/api/today.js
-import { readRange, rangeFor } from "../../lib/googleSheets";
-import { SHEETS, DATA_START_ROW, todayFR } from "../../lib/constants";
+import { readRange } from "../../lib/googleSheets";
+import { SHEETS, DATA_START_ROW } from "../../lib/constants";
+import { findAgentByMatricule } from "../../lib/agents";
 
 export default async function handler(req, res) {
   try {
-    // Lire toutes les manœuvres du calendrier
-    const manoeuvresRows = await readRange(
-      rangeFor(SHEETS.MANOEUVRES, `A${DATA_START_ROW}:D500`)
-    );
-
-    const today = todayFR();
-
-    // Chercher la manœuvre du jour
-    const todayManoeuvre = manoeuvresRows.find(
-      (r) => r[0] && String(r[0]).trim() === today
-    );
-
-    if (todayManoeuvre) {
-      return res.status(200).json({
-        hasTodayManoeuvre: true,
-        manoeuvre: String(todayManoeuvre[1] || "").trim(),
-        lieu: String(todayManoeuvre[2] || "").trim(),
-      });
+    // Lire toutes les manoeuvres
+    const data = await readRange(SHEETS.MANOEUVRES, `A${DATA_START_ROW}:B500`);
+    
+    const allManoeuvres = [];
+    if (data && Array.isArray(data)) {
+      for (const row of data) {
+        if (row[0] && row[1]) {
+          allManoeuvres.push(row[1]); // Colonne B = nom de la manoeuvre
+        }
+      }
     }
 
-    // Pas de manœuvre du jour → retourner toutes les manœuvres du calendrier
-    const allManoeuvres = manoeuvresRows
-      .map((r) => ({
-        date: r[0] ? String(r[0]).trim() : "",
-        manoeuvre: r[1] ? String(r[1]).trim() : "",
-        lieu: r[2] ? String(r[2]).trim() : "",
-      }))
-      .filter((m) => m.manoeuvre && m.date);
+    const todayDate = new Date().toLocaleDateString("fr-FR");
+    const todayManoeuvre = null; // Pas de manoeuvre du jour par défaut
 
     res.status(200).json({
+      today: todayDate,
       hasTodayManoeuvre: false,
+      manoeuvre: todayManoeuvre,
       allManoeuvres: allManoeuvres,
     });
   } catch (err) {
+    console.error("Erreur today:", err);
     res.status(500).json({ error: err.message });
   }
 }
