@@ -8,93 +8,126 @@ export default function Home() {
   const [today, setToday] = useState(null);
   const [allManoeuvres, setAllManoeuvres] = useState([]);
   const [openPicker, setOpenPicker] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/today")
-      .then((r) => r.json())
-      .then((data) => {
-        setToday(data);
-        if (!data.hasTodayManoeuvre && data.allManoeuvres) {
-          setAllManoeuvres(data.allManoeuvres);
-        }
-      })
-      .catch(() => {});
+    fetchToday();
   }, []);
 
-  function handleManoeuvreSelection(manoeuvre) {
-    router.push(`/manoeuvre?type=manoeuvre&lieu=${encodeURIComponent(manoeuvre)}`);
+  async function fetchToday() {
+    try {
+      const res = await fetch("/api/today");
+      const data = await res.json();
+      setToday(data);
+      setAllManoeuvres(data.allManoeuvres || []);
+      setLoading(false);
+    } catch (err) {
+      console.error("Erreur:", err);
+      setLoading(false);
+    }
   }
 
-  const todayDate = new Date().toLocaleDateString("fr-FR");
+  function handleManoeuvreSelection(manoeuvre) {
+    // Extrait le lieu de la manoeuvre
+    const lieu = manoeuvre.split(" - ")[1];
+    router.push(`/manoeuvre?type=manoeuvre&lieu=${encodeURIComponent(lieu)}`);
+  }
+
+  if (loading) {
+    return (
+      <Shell title="SMPM">
+        <div style={{ textAlign: "center", padding: 20 }}>Chargement...</div>
+      </Shell>
+    );
+  }
+
+  const todayDate = today?.today || new Date().toLocaleDateString("fr-FR");
 
   return (
-    <Shell title="SMPM">
-      <div className="home-grid">
+    <Shell title="SMPM" subtitle="Accueil">
+      {/* Boutons principaux */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
         {/* Intervention */}
         <button
-          className="home-tile primary"
           onClick={() => router.push("/manoeuvre?type=intervention")}
+          style={{
+            padding: 16,
+            background: "var(--navy)",
+            color: "#fff",
+            border: "none",
+            borderRadius: 10,
+            fontWeight: 700,
+            fontSize: 16,
+            cursor: "pointer",
+          }}
         >
-          <div className="eyebrow">Aujourd'hui</div>
-          <div className="label">{todayDate}</div>
-          <div className="meta">INTERVENTION</div>
+          🚨 Intervention
         </button>
-
-        {/* Manœuvre du jour ou sélection */}
-        {today?.hasTodayManoeuvre ? (
-          <button
-            className="home-tile"
-            onClick={() =>
-              router.push(
-                `/manoeuvre?type=manoeuvre&lieu=${encodeURIComponent(today.manoeuvre)}`
-              )
-            }
-          >
-            <div className="eyebrow">{todayDate}</div>
-            <div className="label" style={{ fontSize: 16 }}>
-              {today.manoeuvre}
-            </div>
-            <div className="meta">{today.lieu || "Manœuvre"}</div>
-          </button>
-        ) : (
-          <button
-            className="home-tile"
-            onClick={() => setOpenPicker(true)}
-          >
-            <div className="eyebrow">Calendrier</div>
-            <div className="label" style={{ fontSize: 16 }}>
-              Manœuvre
-            </div>
-            <div className="meta">Choisir dans le calendrier</div>
-          </button>
-        )}
 
         {/* Inventaire */}
         <button
-          className="home-tile"
           onClick={() => router.push("/inventaire")}
-        >
-          <div className="eyebrow">Matériel</div>
-          <div className="label">Inventaire</div>
-          <div className="meta">Vérifier les équipements</div>
-        </button>
-
-        {/* Schémas Manoeuvres */}
-        <button
-          className="home-tile schemas"
-          onClick={() => router.push("/schemas")}
           style={{
-            background: "linear-gradient(135deg, #E67E22 0%, #D35400 100%)",
+            padding: 16,
+            background: "var(--navy)",
+            color: "#fff",
+            border: "none",
+            borderRadius: 10,
+            fontWeight: 700,
+            fontSize: 16,
+            cursor: "pointer",
           }}
         >
-          <div className="eyebrow">Documentation</div>
-          <div className="label">Schémas</div>
-          <div className="meta">Consulter les techniques</div>
+          📦 Inventaire
+        </button>
+
+        {/* Manoeuvre */}
+        <button
+          onClick={() => {
+            if (today?.hasTodayManoeuvre) {
+              handleManoeuvreSelection(`${todayDate} - ${today.todayManoeuvre}`);
+            } else {
+              setOpenPicker(!openPicker);
+            }
+          }}
+          disabled={!today?.hasTodayManoeuvre && allManoeuvres.length === 0}
+          style={{
+            gridColumn: "1 / -1",
+            padding: 16,
+            background: today?.hasTodayManoeuvre ? "var(--gold)" : "#ccc",
+            color: today?.hasTodayManoeuvre ? "var(--navy)" : "#666",
+            border: "none",
+            borderRadius: 10,
+            fontWeight: 700,
+            fontSize: 16,
+            cursor: today?.hasTodayManoeuvre || allManoeuvres.length > 0 ? "pointer" : "not-allowed",
+          }}
+        >
+          📋 {todayDate}
+          {today?.hasTodayManoeuvre ? ` - ${today.todayManoeuvre}` : " - Pas de manoeuvre"}
+        </button>
+
+        {/* Schémas */}
+        <button
+          onClick={() => router.push("/schemas")}
+          style={{
+            gridColumn: "1 / -1",
+            padding: 16,
+            background: "#E67E22",
+            color: "#fff",
+            border: "none",
+            borderRadius: 10,
+            fontWeight: 700,
+            fontSize: 16,
+            cursor: "pointer",
+          }}
+        >
+          📄 Schémas Manoeuvres
         </button>
       </div>
 
-      {/* Picker calendrier */}
-      {openPicker && allManoeuvres.length > 0 && (
+      {/* Picker Calendrier - Seulement si pas de manoeuvre du jour */}
+      {!today?.hasTodayManoeuvre && openPicker && allManoeuvres.length > 0 && (
         <div className="card">
           <span className="field-label">Choisir une manœuvre :</span>
           <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 8 }}>
