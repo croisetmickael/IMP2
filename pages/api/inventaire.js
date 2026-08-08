@@ -5,7 +5,7 @@ import { SHEETS, INVENTORY_DATA_START_ROW } from "../../lib/constants";
 
 const INVENTORY_MAPPING = {
   baroud: "SAC BAROUD",
-  abordage: "SAC ABORDAGE",
+  abordage: "Copie de SAC ABORDAGE",
   vehicule: ["COTE GAUCHE", "COTE DROIT", "ARRIERE", "TOURET"],
   caisses: ["CAISSE N°1", "CAISSE N°2", "CAISSE N°3", "CAISSE N°4", "CAISSE N°5", "CAISSE N°6", "CAISSE N°7", "CAISSE N°8", "CAISSE N°9", "CAISSE N°10", "CAISSE N°11", "CAISSE N°12", "CAISSE N°13", "CAISSE N°14"],
 };
