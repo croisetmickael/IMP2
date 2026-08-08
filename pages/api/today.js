@@ -18,11 +18,14 @@ export default async function handler(req, res) {
         const manoeuvre = row[2];
 
         if (date && lieu) {
-          const manoeuvreStr = `${date} - ${lieu}`;
-          allManoeuvres.push(manoeuvreStr);
+          allManoeuvres.push({
+            date: date,
+            lieu: lieu,
+            manoeuvre: lieu, // On utilise "lieu" comme nom de manoeuvre
+          });
 
           // Vérifier si c'est la manoeuvre du jour
-          if (date === todayDate && lieu) {
+          if (date === todayDate) {
             todayManoeuvre = lieu;
           }
         }
