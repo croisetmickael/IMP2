@@ -32,6 +32,13 @@ export default function Home() {
     router.push(`/manoeuvre?type=manoeuvre&lieu=${encodeURIComponent(manoeuvre)}`);
   }
 
+  function openGoogleMaps(e, gps) {
+    e.stopPropagation();
+    if (gps && gps.trim()) {
+      window.open(`https://maps.google.com/?q=${encodeURIComponent(gps)}`, "_blank");
+    }
+  }
+
   async function sendMessageToTelegram() {
     if (!messageText.trim()) {
       alert("Message vide");
@@ -70,6 +77,7 @@ export default function Home() {
   }
 
   const todayDate = today?.today || new Date().toLocaleDateString("fr-FR");
+  const todayGps = today?.allManoeuvres?.find(m => m.date === todayDate)?.gps || "";
 
   return (
     <Shell title="SMPM">
@@ -84,25 +92,55 @@ export default function Home() {
           <div className="meta">INTERVENTION</div>
         </button>
 
-        {/* Manœuvre */}
-        <button
-          className="home-tile"
-          onClick={() => {
-            if (today?.hasTodayManoeuvre) {
-              handleManoeuvreSelection(today.todayManoeuvre);
-            } else {
-              setOpenPicker(true);
-            }
-          }}
-        >
-          <div className="eyebrow">{todayDate}</div>
-          <div className="label" style={{ fontSize: 16 }}>
-            {today?.todayManoeuvre || "Manœuvre"}
-          </div>
-          <div className="meta">
-            {today?.hasTodayManoeuvre ? "Entraînement du jour" : "Choisir dans le calendrier"}
-          </div>
-        </button>
+        {/* Manœuvre - avec bouton GPS */}
+        <div style={{ position: "relative" }}>
+          <button
+            className="home-tile"
+            onClick={() => {
+              if (today?.hasTodayManoeuvre) {
+                handleManoeuvreSelection(today.todayManoeuvre);
+              } else {
+                setOpenPicker(true);
+              }
+            }}
+          >
+            <div className="eyebrow">{todayDate}</div>
+            <div className="label" style={{ fontSize: 16 }}>
+              {today?.todayManoeuvre || "Manœuvre"}
+            </div>
+            <div className="meta">
+              {today?.hasTodayManoeuvre ? "Entraînement du jour" : "Choisir dans le calendrier"}
+            </div>
+          </button>
+          
+          {/* Petit bouton GPS sur le coin */}
+          {todayGps && (
+            <button
+              onClick={(e) => openGoogleMaps(e, todayGps)}
+              style={{
+                position: "absolute",
+                top: 8,
+                right: 8,
+                width: 36,
+                height: 36,
+                background: "#E74C3C",
+                color: "#fff",
+                border: "none",
+                borderRadius: "50%",
+                fontWeight: 700,
+                fontSize: 18,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+              }}
+              title="Ouvrir Google Maps"
+            >
+              📍
+            </button>
+          )}
+        </div>
 
         {/* Suivi */}
         <button
@@ -156,28 +194,45 @@ export default function Home() {
           <div className="sheet" onClick={(e) => e.stopPropagation()}>
             <h3>Choisir une manœuvre</h3>
             {allManoeuvres.map((m, i) => (
-              <button
+              <div
                 key={i}
-                type="button"
-                className="sheet-option"
-                onClick={() => {
-                  handleManoeuvreSelection(m.manoeuvre);
-                  setOpenPicker(false);
-                }}
                 style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "flex-start",
-                  gap: 4,
+                  padding: 12,
+                  marginBottom: 12,
+                  background: "#f9f9f9",
+                  borderRadius: 8,
+                  borderLeft: "4px solid var(--gold)",
                 }}
               >
-                <span style={{ fontWeight: 700, fontSize: 15 }}>
-                  {m.manoeuvre}
-                </span>
-                <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>
-                  {m.date} — {m.lieu}
-                </span>
-              </button>
+                <button
+                  type="button"
+                  className="sheet-option"
+                  onClick={() => {
+                    handleManoeuvreSelection(m.manoeuvre);
+                    setOpenPicker(false);
+                  }}
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "flex-start",
+                    gap: 4,
+                    width: "100%",
+                    textAlign: "left",
+                  }}
+                >
+                  <span style={{ fontWeight: 700, fontSize: 15 }}>
+                    {m.manoeuvre}
+                  </span>
+                  <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>
+                    {m.date} — {m.lieu}
+                  </span>
+                  {m.observation && (
+                    <span style={{ fontSize: 12, color: "var(--ink-soft)", marginTop: 4 }}>
+                      📝 {m.observation}
+                    </span>
+                  )}
+                </button>
+              </div>
             ))}
             <button className="sheet-cancel" onClick={() => setOpenPicker(false)}>
               Fermer
