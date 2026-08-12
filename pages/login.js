@@ -77,8 +77,7 @@ export default function Login() {
             </div>
 
             <input
-              type="password"
-              inputMode="numeric"
+              type="text"
               placeholder="••••"
               value={pin}
               onChange={(e) => setPin(e.target.value.toUpperCase())}
@@ -105,9 +104,9 @@ export default function Login() {
             <button
               className="btn btn-primary"
               onClick={handlePinSubmit}
-              style={{ width: "100%" }}
+              style={{ width: "100%", marginBottom: 12 }}
             >
-              Valider
+              ✅ Valider
             </button>
           </div>
         ) : (
@@ -117,7 +116,7 @@ export default function Login() {
                 🔒 APPLICATION VERROUILLÉE
               </div>
               <div style={{ fontSize: 14, fontWeight: 700 }}>
-                Code de déblocage requis
+                Rentrez le code de déblocage
               </div>
             </div>
 
@@ -152,7 +151,7 @@ export default function Login() {
               onClick={handleUnlock}
               style={{ width: "100%" }}
             >
-              Débloquer
+              🔓 Débloquer
             </button>
           </div>
         )}
